@@ -1,0 +1,270 @@
+
+# Package the template
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Personal Loan Administration System - Backend
+
+Parameters:
+  Stage:
+    Type: String
+    Default: Prod
+    Description: Deployment stage (Dev, Staging, Prod)
+    AllowedValues:
+      - Dev
+      - Staging
+      - Prod
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+    Runtime: python3.11
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        LOANS_TABLE: !Ref LoansTable
+        BORROWERS_TABLE: !Ref BorrowersTable
+        STAGE: !Ref Stage
+    Tracing: PassThrough
+    LoggingConfig:
+      LogFormat: JSON
+      LogGroup: !Sub /aws/lambda/${AWS::StackName}-${Stage}
+    Tags:
+      Stage: !Ref Stage
+      Application: LoanAdministration
+
+Resources:
+  # DynamoDB Tables
+  LoansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Loans-${Stage}
+      AttributeDefinitions:
+        - AttributeName: loanId
+          AttributeType: S
+        - AttributeName: borrowerId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: loanId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: BorrowerIdIndex
+          KeySchema:
+            - AttributeName: borrowerId
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Application
+          Value: LoanAdministration
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  BorrowersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Borrowers-${Stage}
+      AttributeDefinitions:
+        - AttributeName: borrowerId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: borrowerId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Application
+          Value: LoanAdministration
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  # API Gateway
+  LoanApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      EndpointConfiguration:
+        Type: REGIONAL
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          DataTraceEnabled: false
+          MetricsEnabled: false
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 100
+      Tags:
+        Stage: !Ref Stage
+        Application: LoanAdministration
+
+  # Lambda Functions - Loans
+  CreateLoanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub CreateLoan-${Stage}
+      CodeUri: src/
+      Handler: handlers.loans.create_loan
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        CreateLoan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans
+            Method: post
+
+  GetLoansFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetLoans-${Stage}
+      CodeUri: src/
+      Handler: handlers.loans.get_loans
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        GetLoans:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans
+            Method: get
+
+  GetLoanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetLoan-${Stage}
+      CodeUri: src/
+      Handler: handlers.loans.get_loan
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        GetLoan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}
+            Method: get
+
+  UpdateLoanStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub UpdateLoanStatus-${Stage}
+      CodeUri: src/
+      Handler: handlers.loans.update_loan_status
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        UpdateLoanStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}/status
+            Method: put
+
+  # Lambda Functions - Borrowers
+  CreateBorrowerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub CreateBorrower-${Stage}
+      CodeUri: src/
+      Handler: handlers.borrowers.create_borrower
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BorrowersTable
+      Events:
+        CreateBorrower:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /borrowers
+            Method: post
+
+  GetBorrowersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetBorrowers-${Stage}
+      CodeUri: src/
+      Handler: handlers.borrowers.get_borrowers
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BorrowersTable
+      Events:
+        GetBorrowers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /borrowers
+            Method: get
+
+  GetBorrowerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetBorrower-${Stage}
+      CodeUri: src/
+      Handler: handlers.borrowers.get_borrower
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BorrowersTable
+      Events:
+        GetBorrower:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /borrowers/{id}
+            Method: get
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${LoanApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiUrl
+  LoansTableName:
+    Description: DynamoDB Loans Table
+    Value: !Ref LoansTable
+    Export:
+      Name: !Sub ${AWS::StackName}-LoansTable
+  BorrowersTableName:
+    Description: DynamoDB Borrowers Table
+    Value: !Ref BorrowersTable
+    Export:
+      Name: !Sub ${AWS::StackName}-BorrowersTable
+  Stage:
+    Description: Deployment Stage
+    Value: !Ref Stage
+    Export:
+      Name: !Sub ${AWS::StackName}-Stage

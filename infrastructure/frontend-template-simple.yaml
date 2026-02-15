@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Personal Loan Administration System - Frontend (Simple S3 Website)
+
+Parameters:
+  Stage:
+    Type: String
+    Default: prod
+    Description: Deployment stage (dev, staging, prod)
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Resources:
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub loan-admin-frontend-${Stage}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedHeaders:
+              - '*'
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Application
+          Value: LoanAdministration
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub ${FrontendBucket.Arn}/*
+
+Outputs:
+  BucketName:
+    Description: S3 Bucket for frontend
+    Value: !Ref FrontendBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-BucketName-${Stage}
+  
+  WebsiteURL:
+    Description: Website URL (use this to access your app)
+    Value: !GetAtt FrontendBucket.WebsiteURL
+    Export:
+      Name: !Sub ${AWS::StackName}-WebsiteURL-${Stage}
+  
+  BucketRegionalDomainName:
+    Description: S3 Regional Domain Name
+    Value: !GetAtt FrontendBucket.RegionalDomainName
+  
+  Stage:
+    Description: Deployment Stage
+    Value: !Ref Stage
