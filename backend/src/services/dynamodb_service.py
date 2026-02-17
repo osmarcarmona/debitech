@@ -8,6 +8,7 @@ class DynamoDBService:
         self.dynamodb = boto3.resource('dynamodb')
         self.loans_table = self.dynamodb.Table(os.environ['LOANS_TABLE'])
         self.borrowers_table = self.dynamodb.Table(os.environ['BORROWERS_TABLE'])
+        self.payments_table = self.dynamodb.Table(os.environ.get('PAYMENTS_TABLE', 'Payments'))
     
     # Loan operations
     def create_loan(self, loan: Dict) -> Dict:
@@ -92,3 +93,35 @@ class DynamoDBService:
             ExpressionAttributeNames=expression_attribute_names,
             ExpressionAttributeValues=expression_attribute_values
         )
+    
+    # Payment operations
+    def create_payment(self, payment: Dict) -> Dict:
+        self.payments_table.put_item(Item=payment)
+        return payment
+    
+    def get_payment(self, payment_id: str) -> Optional[Dict]:
+        response = self.payments_table.get_item(Key={'paymentId': payment_id})
+        return response.get('Item')
+    
+    def get_payments_by_loan(self, loan_id: str) -> List[Dict]:
+        response = self.payments_table.query(
+            IndexName='LoanIdIndex',
+            KeyConditionExpression='loanId = :loanId',
+            ExpressionAttributeValues={':loanId': loan_id}
+        )
+        return response.get('Items', [])
+    
+    def update_payment(self, payment_id: str, updates: Dict) -> None:
+        update_expression = 'SET ' + ', '.join([f'#{k} = :{k}' for k in updates.keys()])
+        expression_attribute_names = {f'#{k}': k for k in updates.keys()}
+        expression_attribute_values = {f':{k}': v for k, v in updates.items()}
+        
+        self.payments_table.update_item(
+            Key={'paymentId': payment_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeNames=expression_attribute_names,
+            ExpressionAttributeValues=expression_attribute_values
+        )
+    
+    def delete_payment(self, payment_id: str) -> None:
+        self.payments_table.delete_item(Key={'paymentId': payment_id})

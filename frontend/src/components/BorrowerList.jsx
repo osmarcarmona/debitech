@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { borrowerService } from '../services/api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const BorrowerList = () => {
+  const { t } = useLanguage();
   const [borrowers, setBorrowers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,29 +19,29 @@ const BorrowerList = () => {
       setError('');
     } catch (error) {
       console.error('Error fetching borrowers:', error);
-      setError('Failed to load borrowers');
+      setError(t.failedToLoadBorrowers);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="loading">Loading borrowers...</div>;
+  if (loading) return <div className="loading">{t.loadingBorrowers}</div>;
   if (error) return <div className="error-message">{error}</div>;
 
   return (
     <div className="borrower-list">
-      <h2>Borrowers ({borrowers.length})</h2>
+      <h2>{t.borrowers} ({borrowers.length})</h2>
       {borrowers.length === 0 ? (
-        <p className="empty-state">No borrowers yet. Create one to get started!</p>
+        <p className="empty-state">{t.noBorrowersYet}</p>
       ) : (
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Credit Score</th>
-              <th>Status</th>
+              <th>{t.name}</th>
+              <th>{t.email}</th>
+              <th>{t.phone}</th>
+              <th>{t.creditScore}</th>
+              <th>{t.status}</th>
             </tr>
           </thead>
           <tbody>

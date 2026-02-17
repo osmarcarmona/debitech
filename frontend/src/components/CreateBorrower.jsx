@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { borrowerService } from '../services/api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CreateBorrower = ({ onSuccess }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,7 +34,7 @@ const CreateBorrower = ({ onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating borrower:', error);
-      setError(error.response?.data?.error || 'Failed to create borrower');
+      setError(error.response?.data?.error || t.failedToCreateBorrower);
     } finally {
       setLoading(false);
     }
@@ -44,13 +46,13 @@ const CreateBorrower = ({ onSuccess }) => {
 
   return (
     <div className="create-borrower">
-      <h2>Create New Borrower</h2>
+      <h2>{t.createNewBorrower}</h2>
       {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
         <input
           type="text"
           name="name"
-          placeholder="Full Name"
+          placeholder={t.fullName}
           value={formData.name}
           onChange={handleChange}
           required
@@ -58,7 +60,7 @@ const CreateBorrower = ({ onSuccess }) => {
         <input
           type="email"
           name="email"
-          placeholder="Email"
+          placeholder={t.email}
           value={formData.email}
           onChange={handleChange}
           required
@@ -66,7 +68,7 @@ const CreateBorrower = ({ onSuccess }) => {
         <input
           type="tel"
           name="phone"
-          placeholder="Phone Number"
+          placeholder={t.phoneNumber}
           value={formData.phone}
           onChange={handleChange}
           required
@@ -74,14 +76,14 @@ const CreateBorrower = ({ onSuccess }) => {
         <input
           type="number"
           name="creditScore"
-          placeholder="Credit Score (optional)"
+          placeholder={t.creditScoreOptional}
           value={formData.creditScore}
           onChange={handleChange}
           min="300"
           max="850"
         />
         <button type="submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Borrower'}
+          {loading ? t.creating : t.createBorrower}
         </button>
       </form>
     </div>

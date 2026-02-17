@@ -25,6 +25,7 @@ Globals:
       Variables:
         LOANS_TABLE: !Ref LoansTable
         BORROWERS_TABLE: !Ref BorrowersTable
+        PAYMENTS_TABLE: !Ref PaymentsTable
         STAGE: !Ref Stage
     Tracing: PassThrough
     LoggingConfig:
@@ -93,6 +94,36 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: KEYS_ONLY
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Application
+          Value: LoanAdministration
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  PaymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub Payments-${Stage}
+      AttributeDefinitions:
+        - AttributeName: paymentId
+          AttributeType: S
+        - AttributeName: loanId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: paymentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: LoanIdIndex
+          KeySchema:
+            - AttributeName: loanId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
@@ -247,6 +278,77 @@ Resources:
             Path: /borrowers/{id}
             Method: get
 
+  # Lambda Functions - Payments
+  AddPaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub AddPayment-${Stage}
+      CodeUri: src/
+      Handler: handlers.payments.add_payment
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        AddPayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}/payments
+            Method: post
+
+  GetPaymentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetPayments-${Stage}
+      CodeUri: src/
+      Handler: handlers.payments.get_payments
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PaymentsTable
+      Events:
+        GetPayments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}/payments
+            Method: get
+
+  UpdatePaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub UpdatePayment-${Stage}
+      CodeUri: src/
+      Handler: handlers.payments.update_payment
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+      Events:
+        UpdatePayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /payments/{paymentId}
+            Method: put
+
+  DeletePaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub DeletePayment-${Stage}
+      CodeUri: src/
+      Handler: handlers.payments.delete_payment
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+      Events:
+        DeletePayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /payments/{paymentId}
+            Method: delete
+
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
@@ -263,6 +365,11 @@ Outputs:
     Value: !Ref BorrowersTable
     Export:
       Name: !Sub ${AWS::StackName}-BorrowersTable
+  PaymentsTableName:
+    Description: DynamoDB Payments Table
+    Value: !Ref PaymentsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-PaymentsTable
   Stage:
     Description: Deployment Stage
     Value: !Ref Stage

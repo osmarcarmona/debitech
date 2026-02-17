@@ -1,49 +1,88 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import LoanList from './components/LoanList';
+import LoanDetails from './components/LoanDetails';
 import CreateLoan from './components/CreateLoan';
 import BorrowerList from './components/BorrowerList';
 import CreateBorrower from './components/CreateBorrower';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import './App.css';
 
-function App() {
-  const [activeTab, setActiveTab] = useState('borrowers');
+function MainContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { language, setLanguage, t } = useLanguage();
   const [refreshBorrowers, setRefreshBorrowers] = useState(0);
   const [refreshLoans, setRefreshLoans] = useState(0);
+
+  const activeTab = location.pathname.startsWith('/loans') ? 'loans' : 'borrowers';
 
   return (
     <div className="App">
       <header>
-        <h1>Personal Loan Administration</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>{t.appTitle}</h1>
+          <select 
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            style={{ 
+              padding: '8px 16px',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            }}
+          >
+            <option value="es" style={{ background: 'white', color: 'black' }}>Español</option>
+            <option value="en" style={{ background: 'white', color: 'black' }}>English</option>
+          </select>
+        </div>
         <nav className="tabs">
           <button
             className={activeTab === 'borrowers' ? 'active' : ''}
-            onClick={() => setActiveTab('borrowers')}
+            onClick={() => navigate('/')}
           >
-            Borrowers
+            {t.borrowersTab}
           </button>
           <button
             className={activeTab === 'loans' ? 'active' : ''}
-            onClick={() => setActiveTab('loans')}
+            onClick={() => navigate('/loans')}
           >
-            Loans
+            {t.loansTab}
           </button>
         </nav>
       </header>
       <main>
-        {activeTab === 'borrowers' && (
-          <>
-            <CreateBorrower onSuccess={() => setRefreshBorrowers(refreshBorrowers + 1)} />
-            <BorrowerList key={refreshBorrowers} />
-          </>
-        )}
-        {activeTab === 'loans' && (
-          <>
-            <CreateLoan onSuccess={() => setRefreshLoans(refreshLoans + 1)} />
-            <LoanList key={refreshLoans} />
-          </>
-        )}
+        <Routes>
+          <Route path="/" element={
+            <>
+              <CreateBorrower onSuccess={() => setRefreshBorrowers(refreshBorrowers + 1)} />
+              <BorrowerList key={refreshBorrowers} />
+            </>
+          } />
+          <Route path="/loans" element={
+            <>
+              <CreateLoan onSuccess={() => setRefreshLoans(refreshLoans + 1)} />
+              <LoanList key={refreshLoans} />
+            </>
+          } />
+          <Route path="/loans/:id" element={<LoanDetails />} />
+        </Routes>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <LanguageProvider>
+        <MainContent />
+      </LanguageProvider>
+    </Router>
   );
 }
 

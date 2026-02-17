@@ -10,10 +10,14 @@ const api = axios.create({
 });
 
 export const loanService = {
-  getLoans: () => api.get('/loans'),
+  getLoans: (params) => api.get('/loans', { params }),
   getLoan: (id) => api.get(`/loans/${id}`),
   createLoan: (loan) => api.post('/loans', loan),
   updateLoanStatus: (id, status) => api.put(`/loans/${id}/status`, { status }),
+  getPayments: (id) => api.get(`/loans/${id}/payments`),
+  addPayment: (id, payment) => api.post(`/loans/${id}/payments`, payment),
+  updatePayment: (paymentId, payment) => api.put(`/payments/${paymentId}`, payment),
+  deletePayment: (paymentId) => api.delete(`/payments/${paymentId}`),
 };
 
 export const borrowerService = {

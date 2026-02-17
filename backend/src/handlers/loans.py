@@ -17,11 +17,21 @@ def create_loan(event, context):
             'borrowerId': body['borrowerId'],
             'amount': Decimal(str(body['amount'])),
             'interestRate': Decimal(str(body['interestRate'])),
-            'termMonths': int(body['termMonths']),
             'status': 'pending',
             'createdAt': datetime.utcnow().isoformat(),
             'updatedAt': datetime.utcnow().isoformat()
         }
+        
+        # Handle optional fields
+        if 'paymentDay' in body and body['paymentDay']:
+            loan['paymentDay'] = int(body['paymentDay'])
+        
+        if 'monthlyPayment' in body and body['monthlyPayment']:
+            loan['monthlyPayment'] = Decimal(str(body['monthlyPayment']))
+        
+        if 'approvedAt' in body and body['approvedAt']:
+            loan['approvedAt'] = body['approvedAt']
+            loan['status'] = 'approved'
         
         created_loan = db_service.create_loan(loan)
         return success_response(created_loan, 201)

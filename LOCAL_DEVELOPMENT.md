@@ -10,10 +10,29 @@ npm install
 
 ### 2. Configure API URL
 Edit `frontend/.env.development` and set your backend API URL:
+
+For local SAM backend:
 ```
 REACT_APP_API_URL=http://localhost:3001
-# or your deployed API Gateway URL:
-# REACT_APP_API_URL=https://your-api-id.execute-api.us-east-1.amazonaws.com/prod
+```
+
+For deployed Dev stack (recommended):
+```
+REACT_APP_API_URL=https://your-api-id.execute-api.us-east-1.amazonaws.com/Dev
+```
+
+For deployed Prod stack:
+```
+REACT_APP_API_URL=https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod
+```
+
+To get your deployed API URL:
+```bash
+# For Dev stack
+aws cloudformation describe-stacks --stack-name loan-admin-backend-Dev --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' --output text
+
+# For Prod stack
+aws cloudformation describe-stacks --stack-name loan-admin-backend-Prod --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' --output text
 ```
 
 ### 3. Start Development Server
@@ -43,21 +62,21 @@ This starts a local API Gateway at `http://localhost:3001`
 
 If you've already deployed the backend to AWS:
 
-1. Deploy backend first:
+1. Get the API URL from your deployed stack:
 ```bash
-cd backend
-sam build
-sam deploy --guided
+# For Dev stack
+aws cloudformation describe-stacks --stack-name loan-admin-backend-Dev --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' --output text
+
+# For Prod stack
+aws cloudformation describe-stacks --stack-name loan-admin-backend-Prod --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' --output text
 ```
 
-2. Copy the API URL from the output
-
-3. Update `frontend/.env.development`:
+2. Update `frontend/.env.development`:
 ```
-REACT_APP_API_URL=https://xxxxx.execute-api.us-east-1.amazonaws.com/prod
+REACT_APP_API_URL=https://xxxxx.execute-api.us-east-1.amazonaws.com/Dev
 ```
 
-4. Start frontend:
+3. Start frontend:
 ```bash
 cd frontend
 npm start

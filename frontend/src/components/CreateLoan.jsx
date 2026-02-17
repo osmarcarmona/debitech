@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { loanService, borrowerService } from '../services/api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CreateLoan = ({ onSuccess }) => {
+  const { t } = useLanguage();
   const [borrowers, setBorrowers] = useState([]);
   const [formData, setFormData] = useState({
     borrowerId: '',
     amount: '',
     interestRate: '',
-    termMonths: '',
+    approvedAt: '',
   });
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const CreateLoan = ({ onSuccess }) => {
     e.preventDefault();
     try {
       await loanService.createLoan(formData);
-      setFormData({ borrowerId: '', amount: '', interestRate: '', termMonths: '' });
+      setFormData({ borrowerId: '', amount: '', interestRate: '', approvedAt: '' });
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating loan:', error);
@@ -36,14 +38,14 @@ const CreateLoan = ({ onSuccess }) => {
 
   return (
     <div className="create-loan">
-      <h2>Create New Loan</h2>
+      <h2>{t.createNewLoan}</h2>
       <form onSubmit={handleSubmit}>
         <select
           value={formData.borrowerId}
           onChange={(e) => setFormData({ ...formData, borrowerId: e.target.value })}
           required
         >
-          <option value="">Select Borrower</option>
+          <option value="">{t.selectBorrower}</option>
           {borrowers.map((b) => (
             <option key={b.borrowerId} value={b.borrowerId}>
               {b.name}
@@ -52,7 +54,7 @@ const CreateLoan = ({ onSuccess }) => {
         </select>
         <input
           type="number"
-          placeholder="Amount"
+          placeholder={t.amount}
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
@@ -60,19 +62,18 @@ const CreateLoan = ({ onSuccess }) => {
         <input
           type="number"
           step="0.01"
-          placeholder="Interest Rate (%)"
+          placeholder={`${t.interestRate} (%)`}
           value={formData.interestRate}
           onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
           required
         />
         <input
-          type="number"
-          placeholder="Term (months)"
-          value={formData.termMonths}
-          onChange={(e) => setFormData({ ...formData, termMonths: e.target.value })}
-          required
+          type="date"
+          placeholder={t.approvalDate}
+          value={formData.approvedAt}
+          onChange={(e) => setFormData({ ...formData, approvedAt: e.target.value })}
         />
-        <button type="submit">Create Loan</button>
+        <button type="submit">{t.createLoan}</button>
       </form>
     </div>
   );
