@@ -1,9 +1,11 @@
 export const translations = {
   en: {
+    locale: 'en-US',
     // Header
     appTitle: 'Personal Loan Administration',
     borrowersTab: 'Borrowers',
     loansTab: 'Loans',
+    reportsTab: 'Reports',
     
     // Loans List
     loans: 'Loans',
@@ -83,13 +85,39 @@ export const translations = {
     active: 'Active',
     paid: 'Paid',
     defaulted: 'Defaulted',
-    pendingToPay: 'Pending to Pay'
+    pendingToPay: 'Pending to Pay',
+    
+    // Reports
+    reportsTitle: 'Loan Reports',
+    totalDebt: 'Total Outstanding Debt',
+    totalInvested: 'Total Invested',
+    interestProfit: 'Interest Profit',
+    incomingPayment: 'Expected Incoming Payment',
+    topProfitableBorrowers: 'Top Profitable Borrowers',
+    activeLoansCount: 'Active Loans',
+    principalAmounts: 'Principal Amounts',
+    earnedToDate: 'Earned to Date',
+    expectedRevenue: 'Expected Revenue',
+    summary: 'Summary',
+    totalLoans: 'Total Loans',
+    approvedLoans: 'Approved Loans',
+    activeLoans: 'Active Loans',
+    totalBorrowers: 'Total Borrowers',
+    noData: 'No Data',
+    loading: 'Loading...',
+    errorLoadingReports: 'Error loading reports',
+    startDate: 'Start Date',
+    endDate: 'End Date',
+    applyFilters: 'Apply Filters',
+    clearFilters: 'Clear Filters'
   },
   es: {
+    locale: 'es-ES',
     // Header
     appTitle: 'Administración de Préstamos Personales',
     borrowersTab: 'Prestatarios',
     loansTab: 'Préstamos',
+    reportsTab: 'Reportes',
     
     // Loans List
     loans: 'Préstamos',
@@ -169,6 +197,30 @@ export const translations = {
     active: 'Activo',
     paid: 'Pagado',
     defaulted: 'En Mora',
-    pendingToPay: 'Pendiente de Pago'
+    pendingToPay: 'Pendiente de Pago',
+    
+    // Reports
+    reportsTitle: 'Reportes de Préstamos',
+    totalDebt: 'Deuda Total Pendiente',
+    totalInvested: 'Total Invertido',
+    interestProfit: 'Ganancia por Intereses',
+    incomingPayment: 'Pago Entrante Esperado',
+    topProfitableBorrowers: 'Prestatarios Más Rentables',
+    activeLoansCount: 'Préstamos Activos',
+    principalAmounts: 'Montos Principales',
+    earnedToDate: 'Ganado a la Fecha',
+    expectedRevenue: 'Ingreso Esperado',
+    summary: 'Resumen',
+    totalLoans: 'Total de Préstamos',
+    approvedLoans: 'Préstamos Aprobados',
+    activeLoans: 'Préstamos Activos',
+    totalBorrowers: 'Total de Prestatarios',
+    noData: 'Sin Datos',
+    loading: 'Cargando...',
+    errorLoadingReports: 'Error al cargar reportes',
+    startDate: 'Fecha Inicio',
+    endDate: 'Fecha Fin',
+    applyFilters: 'Aplicar Filtros',
+    clearFilters: 'Limpiar Filtros'
   }
 };

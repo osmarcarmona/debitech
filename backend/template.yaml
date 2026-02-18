@@ -349,6 +349,28 @@ Resources:
             Path: /payments/{paymentId}
             Method: delete
 
+  # Lambda Functions - Reports
+  GetReportsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetReports-${Stage}
+      CodeUri: src/
+      Handler: handlers.reports.get_reports
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref BorrowersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref PaymentsTable
+      Events:
+        GetReports:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /reports
+            Method: get
+
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL

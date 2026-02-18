@@ -5,6 +5,7 @@ import LoanDetails from './components/LoanDetails';
 import CreateLoan from './components/CreateLoan';
 import BorrowerList from './components/BorrowerList';
 import CreateBorrower from './components/CreateBorrower';
+import Reports from './components/Reports';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import './App.css';
 
@@ -15,7 +16,13 @@ function MainContent() {
   const [refreshBorrowers, setRefreshBorrowers] = useState(0);
   const [refreshLoans, setRefreshLoans] = useState(0);
 
-  const activeTab = location.pathname.startsWith('/loans') ? 'loans' : 'borrowers';
+  const getActiveTab = () => {
+    if (location.pathname.startsWith('/loans')) return 'loans';
+    if (location.pathname.startsWith('/reports')) return 'reports';
+    return 'borrowers';
+  };
+
+  const activeTab = getActiveTab();
 
   return (
     <div className="App">
@@ -53,6 +60,12 @@ function MainContent() {
           >
             {t.loansTab}
           </button>
+          <button
+            className={activeTab === 'reports' ? 'active' : ''}
+            onClick={() => navigate('/reports')}
+          >
+            {t.reportsTab}
+          </button>
         </nav>
       </header>
       <main>
@@ -70,6 +83,7 @@ function MainContent() {
             </>
           } />
           <Route path="/loans/:id" element={<LoanDetails />} />
+          <Route path="/reports" element={<Reports />} />
         </Routes>
       </main>
     </div>

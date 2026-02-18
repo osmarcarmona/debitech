@@ -262,3 +262,282 @@ tr:hover {
 .payments-section table {
   margin-top: 10px;
 }
+
+/* Reports Page Styles */
+.reports-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.reports-container h2 {
+  margin-top: 0;
+  color: #282c34;
+  margin-bottom: 25px;
+  font-size: 24px;
+}
+
+.reports-filters {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.filter-group input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filter-group input[type="date"]:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.filter-button {
+  padding: 8px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.filter-button:hover {
+  background: #0056b3;
+}
+
+.filter-button.clear {
+  background: #6c757d;
+}
+
+.filter-button.clear:hover {
+  background: #5a6268;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.report-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  color: #282c34;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 3px solid #667eea;
+}
+
+.report-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.report-card:nth-child(1) {
+  border-color: #667eea;
+}
+
+.report-card:nth-child(2) {
+  border-color: #f093fb;
+}
+
+.report-card:nth-child(3) {
+  border-color: #4facfe;
+}
+
+.report-card:nth-child(4) {
+  border-color: #43e97b;
+}
+
+.report-card:nth-child(5) {
+  border-color: #fa709a;
+}
+
+.report-card.summary {
+  border-color: #a8edea;
+  grid-column: span 1;
+}
+
+.report-card.top-borrowers {
+  grid-column: span 2;
+}
+
+.top-borrowers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.borrower-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.2s;
+  border: 1px solid #e9ecef;
+}
+
+.borrower-item:hover {
+  background: #e9ecef;
+}
+
+.borrower-rank {
+  font-size: 20px;
+  font-weight: bold;
+  min-width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fa709a;
+  color: white;
+  border-radius: 50%;
+}
+
+.borrower-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.borrower-name {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+  color: #282c34;
+}
+
+.borrower-profit {
+  font-size: 16px;
+  font-weight: 700;
+  color: #28a745;
+}
+
+.report-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.report-content {
+  flex: 1;
+}
+
+.report-content h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+  color: #282c34;
+}
+
+.report-value.profit {
+  color: #28a745;
+}
+
+.report-value-name {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 5px 0;
+  color: #282c34;
+}
+
+.report-value-small {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 5px 0 0 0;
+  color: #28a745;
+}
+
+.report-subtitle {
+  display: block;
+  font-size: 12px;
+  margin-top: 8px;
+  color: #6c757d;
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item span {
+  font-size: 14px;
+  color: #495057;
+}
+
+.summary-item strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: #282c34;
+}
+
+@media (max-width: 768px) {
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .report-card.summary {
+    grid-column: span 1;
+  }
+  
+  .report-card.top-borrowers {
+    grid-column: span 1;
+  }
+}

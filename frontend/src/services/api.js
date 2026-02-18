@@ -26,4 +26,8 @@ export const borrowerService = {
   createBorrower: (borrower) => api.post('/borrowers', borrower),
 };
 
+export const reportsService = {
+  getReports: (params) => api.get('/reports', { params }),
+};
+
 export default api;

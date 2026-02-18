@@ -10,7 +10,7 @@ const LoanList = () => {
   const [borrowers, setBorrowers] = useState({});
   const [payments, setPayments] = useState({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(['approved', 'active']);
   const [sortField, setSortField] = useState('approvedAt');
   const [sortDirection, setSortDirection] = useState('desc');
 
@@ -21,14 +21,15 @@ const LoanList = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [loansResponse, borrowersResponse] = await Promise.all([
-        statusFilter === 'all' 
-          ? loanService.getLoans()
-          : loanService.getLoans({ status: statusFilter }),
-        borrowerService.getBorrowers()
-      ]);
+      const loansResponse = await loanService.getLoans();
+      const borrowersResponse = await borrowerService.getBorrowers();
       
-      setLoans(loansResponse.data);
+      // Filter loans by selected statuses
+      const filteredLoans = statusFilter.length === 0 
+        ? loansResponse.data 
+        : loansResponse.data.filter(loan => statusFilter.includes(loan.status));
+      
+      setLoans(filteredLoans);
       
       // Create a map of borrowerId to borrower name
       const borrowerMap = {};
@@ -40,7 +41,7 @@ const LoanList = () => {
       // Fetch payments for each loan
       const paymentsMap = {};
       await Promise.all(
-        loansResponse.data.map(async (loan) => {
+        filteredLoans.map(async (loan) => {
           try {
             const paymentsResponse = await loanService.getPayments(loan.loanId);
             paymentsMap[loan.loanId] = paymentsResponse.data;
@@ -200,10 +201,14 @@ const LoanList = () => {
       <div style={{ marginBottom: '1rem' }}>
         <label>{t.filterByStatus}: </label>
         <select 
+          multiple
           value={statusFilter} 
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => {
+            const selected = Array.from(e.target.selectedOptions, option => option.value);
+            setStatusFilter(selected);
+          }}
+          style={{ minHeight: '120px', minWidth: '150px' }}
         >
-          <option value="all">{t.all}</option>
           <option value="pending">{t.pending}</option>
           <option value="approved">{t.approved}</option>
           <option value="active">{t.active}</option>
