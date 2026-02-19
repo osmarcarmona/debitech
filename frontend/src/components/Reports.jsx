@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Paper, Typography, Grid, Card, CardContent, TextField, Button, Box, CircularProgress, Alert } from '@mui/material';
 import { useLanguage } from '../contexts/LanguageContext';
 import { reportsService } from '../services/api';
 
@@ -80,11 +81,11 @@ function Reports() {
   };
 
   if (loading) {
-    return <div className="loading">{t.loading || 'Loading...'}</div>;
+    return <CircularProgress sx={{ display: 'block', margin: '2rem auto' }} />;
   }
 
   if (error) {
-    return <div className="error">{error}</div>;
+    return <Alert severity="error">{error}</Alert>;
   }
 
   if (!reports) {
@@ -92,119 +93,153 @@ function Reports() {
   }
 
   return (
-    <div className="reports-container">
-      <h2>{t.reportsTitle}</h2>
+    <Box>
+      <Typography variant="h4" gutterBottom>{t.reportsTitle}</Typography>
       
-      <div className="reports-filters">
-        <div className="filter-group">
-          <label>{t.startDate}:</label>
-          <input
+      <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
             type="date"
+            label={t.startDate}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-        <div className="filter-group">
-          <label>{t.endDate}:</label>
-          <input
+          <TextField
             type="date"
+            label={t.endDate}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-        <button onClick={handleApplyFilters} className="filter-button">
-          {t.applyFilters}
-        </button>
-        <button onClick={handleClearFilters} className="filter-button clear">
-          {t.clearFilters}
-        </button>
-      </div>
+          <Button variant="contained" onClick={handleApplyFilters}>
+            {t.applyFilters}
+          </Button>
+          <Button variant="outlined" onClick={handleClearFilters}>
+            {t.clearFilters}
+          </Button>
+        </Box>
+      </Paper>
       
-      <div className="reports-grid">
-        <div className="report-card">
-          <div className="report-icon">💰</div>
-          <div className="report-content">
-            <h3>{t.totalDebt}</h3>
-            <p className="report-value">{formatCurrency(reports.totalDebt)}</p>
-            <span className="report-subtitle">{t.activeLoansCount}: {reports.activeLoans}</span>
-          </div>
-        </div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>💰</Typography>
+              <Typography variant="h6" gutterBottom>{t.totalDebt}</Typography>
+              <Typography variant="h4" color="primary">{formatCurrency(reports.totalDebt)}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t.activeLoansCount}: {reports.activeLoans}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="report-card">
-          <div className="report-icon">💵</div>
-          <div className="report-content">
-            <h3>{t.totalInvested}</h3>
-            <p className="report-value">{formatCurrency(reports.totalInvested)}</p>
-            <span className="report-subtitle">{t.principalAmounts}</span>
-          </div>
-        </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>💵</Typography>
+              <Typography variant="h6" gutterBottom>{t.totalInvested}</Typography>
+              <Typography variant="h4" color="primary">{formatCurrency(reports.totalInvested)}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t.principalAmounts}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="report-card">
-          <div className="report-icon">📈</div>
-          <div className="report-content">
-            <h3>{t.interestProfit}</h3>
-            <p className="report-value profit">{formatCurrency(reports.interestProfit)}</p>
-            <span className="report-subtitle">{t.earnedToDate}</span>
-          </div>
-        </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>📈</Typography>
+              <Typography variant="h6" gutterBottom>{t.interestProfit}</Typography>
+              <Typography variant="h4" color="success.main">{formatCurrency(reports.interestProfit)}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t.earnedToDate}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="report-card">
-          <div className="report-icon">📊</div>
-          <div className="report-content">
-            <h3>{t.incomingPayment}</h3>
-            <p className="report-value">{formatCurrency(reports.incomingPayment)}</p>
-            <span className="report-subtitle">{getCurrentMonthName()}</span>
-          </div>
-        </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>📊</Typography>
+              <Typography variant="h6" gutterBottom>{t.incomingPayment}</Typography>
+              <Typography variant="h4" color="primary">{formatCurrency(reports.incomingPayment)}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {getCurrentMonthName()}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="report-card top-borrowers">
-          <div className="report-icon">🏆</div>
-          <div className="report-content">
-            <h3>{t.topProfitableBorrowers}</h3>
-            {reports.topProfitableBorrowers && reports.topProfitableBorrowers.length > 0 ? (
-              <div className="top-borrowers-list">
-                {reports.topProfitableBorrowers.map((borrower, index) => (
-                  <div key={borrower.borrowerId} className="borrower-item">
-                    <div className="borrower-rank">{index + 1}</div>
-                    <div className="borrower-info">
-                      <span className="borrower-name">{borrower.name}</span>
-                      <span className="borrower-profit">{formatCurrency(borrower.profit)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="report-value-name">{t.noData}</p>
-            )}
-          </div>
-        </div>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>🏆</Typography>
+              <Typography variant="h6" gutterBottom>{t.topProfitableBorrowers}</Typography>
+              {reports.topProfitableBorrowers && reports.topProfitableBorrowers.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                  {reports.topProfitableBorrowers.map((borrower, index) => (
+                    <Box 
+                      key={borrower.borrowerId} 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 2,
+                        p: 1,
+                        bgcolor: 'background.default',
+                        borderRadius: 1
+                      }}
+                    >
+                      <Typography variant="h6" color="primary" sx={{ minWidth: 30 }}>
+                        {index + 1}
+                      </Typography>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="body1">{borrower.name}</Typography>
+                        <Typography variant="body2" color="success.main" fontWeight="bold">
+                          {formatCurrency(borrower.profit)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography color="text.secondary">{t.noData}</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="report-card summary">
-          <div className="report-icon">📋</div>
-          <div className="report-content">
-            <h3>{t.summary}</h3>
-            <div className="summary-items">
-              <div className="summary-item">
-                <span>{t.totalLoans}:</span>
-                <strong>{reports.totalLoans}</strong>
-              </div>
-              <div className="summary-item">
-                <span>{t.approvedLoans}:</span>
-                <strong>{reports.approvedLoans}</strong>
-              </div>
-              <div className="summary-item">
-                <span>{t.activeLoans}:</span>
-                <strong>{reports.activeLoans}</strong>
-              </div>
-              <div className="summary-item">
-                <span>{t.totalBorrowers}:</span>
-                <strong>{reports.totalBorrowers}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h3" sx={{ mb: 1 }}>📋</Typography>
+              <Typography variant="h6" gutterBottom>{t.summary}</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{t.totalLoans}:</Typography>
+                  <Typography fontWeight="bold">{reports.totalLoans}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{t.approvedLoans}:</Typography>
+                  <Typography fontWeight="bold">{reports.approvedLoans}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{t.activeLoans}:</Typography>
+                  <Typography fontWeight="bold">{reports.activeLoans}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{t.totalBorrowers}:</Typography>
+                  <Typography fontWeight="bold">{reports.totalBorrowers}</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }
 

@@ -82,18 +82,9 @@ Resources:
       AttributeDefinitions:
         - AttributeName: borrowerId
           AttributeType: S
-        - AttributeName: email
-          AttributeType: S
       KeySchema:
         - AttributeName: borrowerId
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: EmailIndex
-          KeySchema:
-            - AttributeName: email
-              KeyType: HASH
-          Projection:
-            ProjectionType: KEYS_ONLY
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
@@ -290,6 +281,8 @@ Resources:
             TableName: !Ref PaymentsTable
         - DynamoDBReadPolicy:
             TableName: !Ref LoansTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
       Events:
         AddPayment:
           Type: Api
@@ -324,6 +317,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
       Events:
         UpdatePayment:
           Type: Api
@@ -341,6 +336,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
       Events:
         DeletePayment:
           Type: Api

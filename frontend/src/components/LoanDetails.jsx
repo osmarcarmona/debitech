@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Paper, Typography, Button, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, Grid, Card, CardContent, Box, Alert, CircularProgress, IconButton } from '@mui/material';
+import { ArrowBack, Edit, Delete, Save, Cancel } from '@mui/icons-material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -242,9 +244,9 @@ const LoanDetails = () => {
     return nextPaymentDate;
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
-  if (!loan) return <div>Loan not found</div>;
+  if (loading) return <CircularProgress sx={{ display: 'block', margin: '2rem auto' }} />;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (!loan) return <Alert severity="warning">Loan not found</Alert>;
 
   const totalPaid = calculateTotalPaid();
   const accruedInterest = calculateAccruedInterest();
@@ -255,265 +257,283 @@ const LoanDetails = () => {
   const billingCycles = calculateBillingCycles();
 
   return (
-    <div className="loan-details">
-      <button onClick={() => navigate(-1)} style={{ marginBottom: '1rem' }}>
+    <Box>
+      <Button 
+        startIcon={<ArrowBack />} 
+        onClick={() => navigate(-1)} 
+        sx={{ mb: 2 }}
+      >
         {t.backToLoans}
-      </button>
+      </Button>
       
-      <h2>{t.loanDetails}</h2>
+      <Typography variant="h4" gutterBottom>{t.loanDetails}</Typography>
       
-      <div className="details-grid">
-        <div className="detail-section">
-          <h3>{t.loanInformation}</h3>
-          <div className="detail-row">
-            <span className="label">{t.loanId}:</span>
-            <span className="value">{loan.loanId}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.principalAmount}:</span>
-            <span className="value">${parseFloat(loan.amount).toFixed(2)}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.interestRate}:</span>
-            <span className="value">{loan.interestRate}% {t.monthly}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.monthInterestCycles}:</span>
-            <span className="value" style={{ color: '#007bff', fontWeight: 'bold' }}>
-              {billingCycles} {billingCycles === 1 ? t.cycle : t.cycles}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.accruedInterest}:</span>
-            <span className="value" style={{ color: '#ff6b6b', fontWeight: 'bold' }}>
-              ${accruedInterest.toFixed(2)}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.totalAmount}:</span>
-            <span className="value">${totalAmount.toFixed(2)}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.minimalBasePayment}:</span>
-            <span className="value" style={{ color: '#007bff', fontWeight: 'bold' }}>
-              ${minimalBasePayment.toFixed(2)} / {t.month}
-            </span>
-          </div>
-          {nextPaymentDate && (
-            <div className="detail-row">
-              <span className="label">{t.nextPaymentDue}:</span>
-              <span className="value" style={{ color: '#ff6b6b' }}>
-                {nextPaymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-            </div>
-          )}
-          <div className="detail-row">
-            <span className="label">{t.status}:</span>
-            <span className="value">
-              <select
-                value={loan.status}
-                onChange={(e) => updateStatus(e.target.value)}
-              >
-                <option value="pending">{t.pending}</option>
-                <option value="approved">{t.approved}</option>
-                <option value="active">{t.active}</option>
-                <option value="paid">{t.paid}</option>
-                <option value="defaulted">{t.defaulted}</option>
-              </select>
-            </span>
-          </div>
-        </div>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t.loanInformation}</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.loanId}:</Typography>
+                  <Typography>{loan.loanId}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.principalAmount}:</Typography>
+                  <Typography>${parseFloat(loan.amount).toFixed(2)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.balanceAmount}:</Typography>
+                  <Typography color="warning.main" fontWeight="bold">
+                    ${loan.balanceAmount ? parseFloat(loan.balanceAmount).toFixed(2) : parseFloat(loan.amount).toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.interestRate}:</Typography>
+                  <Typography>{loan.interestRate}% {t.monthly}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.monthInterestCycles}:</Typography>
+                  <Typography color="primary" fontWeight="bold">
+                    {billingCycles} {billingCycles === 1 ? t.cycle : t.cycles}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.accruedInterest}:</Typography>
+                  <Typography color="error" fontWeight="bold">
+                    ${accruedInterest.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.totalAmount}:</Typography>
+                  <Typography>${totalAmount.toFixed(2)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.minimalBasePayment}:</Typography>
+                  <Typography color="primary" fontWeight="bold">
+                    ${minimalBasePayment.toFixed(2)} / {t.month}
+                  </Typography>
+                </Box>
+                {nextPaymentDate && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography color="text.secondary">{t.nextPaymentDue}:</Typography>
+                    <Typography color="error">
+                      {nextPaymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Typography>
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography color="text.secondary">{t.status}:</Typography>
+                  <Select
+                    value={loan.status}
+                    onChange={(e) => updateStatus(e.target.value)}
+                    size="small"
+                  >
+                    <MenuItem value="pending">{t.pending}</MenuItem>
+                    <MenuItem value="approved">{t.approved}</MenuItem>
+                    <MenuItem value="active">{t.active}</MenuItem>
+                    <MenuItem value="paid">{t.paid}</MenuItem>
+                    <MenuItem value="defaulted">{t.defaulted}</MenuItem>
+                  </Select>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div className="detail-section">
-          <h3>{t.paymentSummary}</h3>
-          <div className="detail-row">
-            <span className="label">{t.totalPaid}:</span>
-            <span className="value" style={{ color: '#28a745', fontWeight: 'bold' }}>
-              ${totalPaid.toFixed(2)}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.amountDue}:</span>
-            <span className="value" style={{ color: dueAmount > 0 ? '#dc3545' : '#28a745', fontWeight: 'bold' }}>
-              ${dueAmount.toFixed(2)}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.numberOfPayments}:</span>
-            <span className="value">{payments.length}</span>
-          </div>
-        </div>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t.paymentSummary}</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.totalPaid}:</Typography>
+                  <Typography color="success.main" fontWeight="bold">
+                    ${totalPaid.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.amountDue}:</Typography>
+                  <Typography color={dueAmount > 0 ? 'error.main' : 'success.main'} fontWeight="bold">
+                    ${dueAmount.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.numberOfPayments}:</Typography>
+                  <Typography>{payments.length}</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
 
-        <div className="detail-section">
-          <h3>{t.borrowerInformation}</h3>
-          {borrower ? (
-            <>
-              <div className="detail-row">
-                <span className="label">{t.name}:</span>
-                <span className="value">{borrower.name}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">{t.email}:</span>
-                <span className="value">{borrower.email}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">{t.phone}:</span>
-                <span className="value">{borrower.phone}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">{t.creditScore}:</span>
-                <span className="value">{borrower.creditScore}</span>
-              </div>
-            </>
-          ) : (
-            <p>Borrower information not available</p>
-          )}
-        </div>
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t.borrowerInformation}</Typography>
+              {borrower ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography color="text.secondary">{t.name}:</Typography>
+                    <Typography>{borrower.name}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography color="text.secondary">{t.phone}:</Typography>
+                    <Typography>{borrower.phone}</Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Typography color="text.secondary">Borrower information not available</Typography>
+              )}
+            </CardContent>
+          </Card>
 
-        <div className="detail-section">
-          <h3>{t.timeline}</h3>
-          <div className="detail-row">
-            <span className="label">{t.created}:</span>
-            <span className="value">
-              {loan.createdAt ? new Date(loan.createdAt).toLocaleString() : '-'}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.approved}:</span>
-            <span className="value">
-              {loan.approvedAt ? new Date(loan.approvedAt).toLocaleString() : '-'}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="label">{t.disbursed}:</span>
-            <span className="value">
-              {loan.disbursedAt ? new Date(loan.disbursedAt).toLocaleString() : '-'}
-            </span>
-          </div>
-        </div>
-      </div>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t.timeline}</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.created}:</Typography>
+                  <Typography>
+                    {loan.createdAt ? new Date(loan.createdAt).toLocaleString() : '-'}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.approved}:</Typography>
+                  <Typography>
+                    {loan.approvedAt ? new Date(loan.approvedAt).toLocaleString() : '-'}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.disbursed}:</Typography>
+                  <Typography>
+                    {loan.disbursedAt ? new Date(loan.disbursedAt).toLocaleString() : '-'}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-      <div className="payments-section" style={{ marginTop: '20px' }}>
-        <h3>{t.addPayment}</h3>
-        {paymentError && (
-          <div style={{ 
-            background: '#f8d7da', 
-            color: '#721c24', 
-            padding: '10px', 
-            borderRadius: '4px', 
-            marginBottom: '10px',
-            border: '1px solid #f5c6cb'
-          }}>
-            {paymentError}
-          </div>
-        )}
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>{t.addPayment}</Typography>
+        {paymentError && <Alert severity="error" sx={{ mb: 2 }}>{paymentError}</Alert>}
         {dueAmount === 0 ? (
-          <p style={{ color: '#28a745', fontWeight: 'bold', padding: '10px', background: '#d4edda', borderRadius: '4px' }}>
-            {t.fullyPaid}
-          </p>
+          <Alert severity="success">{t.fullyPaid}</Alert>
         ) : (
-          <form onSubmit={handleAddPayment} style={{ maxWidth: '400px' }}>
-            <input
+          <Box component="form" onSubmit={handleAddPayment} sx={{ display: 'flex', gap: 2, mb: 3, maxWidth: 600 }}>
+            <TextField
               type="number"
-              step="0.01"
-              placeholder={t.paymentAmount}
+              label={t.paymentAmount}
               value={newPayment.amount}
               onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-              max={dueAmount}
+              inputProps={{ step: '0.01', max: dueAmount }}
+              helperText={`${t.maximumPayment}: $${dueAmount.toFixed(2)}`}
               required
+              fullWidth
             />
-            <small style={{ color: '#666', marginTop: '-5px', marginBottom: '5px', display: 'block' }}>
-              {t.maximumPayment}: ${dueAmount.toFixed(2)}
-            </small>
-            <input
+            <TextField
               type="date"
-              placeholder={t.paymentDate}
+              label={t.paymentDate}
               value={newPayment.paymentDate}
               onChange={(e) => setNewPayment({ ...newPayment, paymentDate: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
             />
-            <button type="submit">{t.addPayment}</button>
-          </form>
+            <Button type="submit" variant="contained" sx={{ minWidth: 120 }}>
+              {t.addPayment}
+            </Button>
+          </Box>
         )}
 
-        <h3 style={{ marginTop: '30px' }}>{t.paymentHistory}</h3>
+        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>{t.paymentHistory}</Typography>
         {payments.length > 0 ? (
-          <table>
-            <thead>
-              <tr>
-                <th>{t.date}</th>
-                <th>{t.amount}</th>
-                <th>{t.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).map((payment) => (
-                <tr key={payment.paymentId}>
-                  {editingPayment && editingPayment.paymentId === payment.paymentId ? (
-                    <>
-                      <td>
-                        <input
-                          type="date"
-                          value={editingPayment.paymentDate}
-                          onChange={(e) => setEditingPayment({ ...editingPayment, paymentDate: e.target.value })}
-                          style={{ padding: '5px', width: '100%' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editingPayment.amount}
-                          onChange={(e) => setEditingPayment({ ...editingPayment, amount: e.target.value })}
-                          style={{ padding: '5px', width: '100%' }}
-                        />
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => handleUpdatePayment(payment.paymentId, {
-                            amount: editingPayment.amount,
-                            paymentDate: editingPayment.paymentDate
-                          })}
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '12px' }}
-                        >
-                          {t.save}
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          style={{ padding: '5px 10px', fontSize: '12px', background: '#6c757d' }}
-                        >
-                          {t.cancel}
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
-                      <td>${parseFloat(payment.amount).toFixed(2)}</td>
-                      <td>
-                        <button
-                          onClick={() => startEditingPayment(payment)}
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '12px', background: '#ffc107' }}
-                        >
-                          {t.edit}
-                        </button>
-                        <button
-                          onClick={() => handleDeletePayment(payment.paymentId)}
-                          style={{ padding: '5px 10px', fontSize: '12px', background: '#dc3545' }}
-                        >
-                          {t.delete}
-                        </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t.date}</TableCell>
+                  <TableCell>{t.amount}</TableCell>
+                  <TableCell>{t.actions}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).map((payment) => (
+                  <TableRow key={payment.paymentId} hover>
+                    {editingPayment && editingPayment.paymentId === payment.paymentId ? (
+                      <>
+                        <TableCell>
+                          <TextField
+                            type="date"
+                            value={editingPayment.paymentDate}
+                            onChange={(e) => setEditingPayment({ ...editingPayment, paymentDate: e.target.value })}
+                            size="small"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            value={editingPayment.amount}
+                            onChange={(e) => setEditingPayment({ ...editingPayment, amount: e.target.value })}
+                            inputProps={{ step: '0.01' }}
+                            size="small"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleUpdatePayment(payment.paymentId, {
+                              amount: editingPayment.amount,
+                              paymentDate: editingPayment.paymentDate
+                            })}
+                            size="small"
+                          >
+                            <Save />
+                          </IconButton>
+                          <IconButton
+                            color="secondary"
+                            onClick={cancelEditing}
+                            size="small"
+                          >
+                            <Cancel />
+                          </IconButton>
+                        </TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
+                        <TableCell>${parseFloat(payment.amount).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <IconButton
+                            color="warning"
+                            onClick={() => startEditingPayment(payment)}
+                            size="small"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeletePayment(payment.paymentId)}
+                            size="small"
+                          >
+                            <Delete />
+                          </IconButton>
+                        </TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>{t.noPayments}</p>
+          <Typography color="text.secondary" sx={{ fontStyle: 'italic', py: 2 }}>
+            {t.noPayments}
+          </Typography>
         )}
-      </div>
-    </div>
+      </Paper>
+    </Box>
   );
 };
 

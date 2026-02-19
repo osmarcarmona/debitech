@@ -28,7 +28,8 @@ if [ -z "$API_URL" ]; then
   API_URL=$(aws cloudformation describe-stacks \
     --stack-name loan-admin-backend-$STAGE \
     --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
-    --output text 2>/dev/null)
+    --output text \
+    --profile debitech 2>/dev/null)
   
   if [ -z "$API_URL" ]; then
     echo ""
@@ -54,26 +55,30 @@ echo "📦 Step 1: Deploying frontend infrastructure..."
 cd infrastructure
 
 # Check if stack already exists
-if aws cloudformation describe-stacks --stack-name loan-admin-frontend-$STAGE &> /dev/null; then
+if aws cloudformation describe-stacks --stack-name loan-admin-frontend-$STAGE --profile debitech &> /dev/null; then
   echo "Stack already exists, updating..."
   aws cloudformation update-stack \
     --stack-name loan-admin-frontend-$STAGE \
     --template-body file://frontend-template-simple.yaml \
-    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER 2>&1 | grep -v "No updates" || echo "No updates needed"
+    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER \
+    --profile debitech 2>&1 | grep -v "No updates" || echo "No updates needed"
   
   echo "⏳ Waiting for stack update..."
   aws cloudformation wait stack-update-complete \
-    --stack-name loan-admin-frontend-$STAGE 2>/dev/null || true
+    --stack-name loan-admin-frontend-$STAGE \
+    --profile debitech 2>/dev/null || true
 else
   echo "Creating new stack..."
   aws cloudformation create-stack \
     --stack-name loan-admin-frontend-$STAGE \
     --template-body file://frontend-template-simple.yaml \
-    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER
+    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER \
+    --profile debitech
   
   echo "⏳ Waiting for stack creation..."
   aws cloudformation wait stack-create-complete \
-    --stack-name loan-admin-frontend-$STAGE
+    --stack-name loan-admin-frontend-$STAGE \
+    --profile debitech
 fi
 
 echo ""
@@ -104,16 +109,18 @@ echo "🔍 Retrieving S3 bucket information..."
 BUCKET_NAME=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-frontend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 WEBSITE_URL=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-frontend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 # Upload to S3
 echo "📤 Uploading frontend to S3..."
-aws s3 sync build/ s3://$BUCKET_NAME/ --delete
+aws s3 sync build/ s3://$BUCKET_NAME/ --delete --profile debitech
 
 echo ""
 echo "=========================================="

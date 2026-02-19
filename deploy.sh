@@ -40,21 +40,22 @@ echo "=========================================="
 echo ""
 
 # Get AWS region and account ID
-AWS_REGION=$(aws configure get region || echo "us-east-1")
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION=$(aws configure get region --profile debitech || echo "us-east-1")
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile debitech)
 
 # Create SAM deployment bucket if it doesn't exist
 SAM_BUCKET="aws-sam-cli-managed-default-samclisourcebucket-${AWS_ACCOUNT_ID}"
 echo "🔍 Checking SAM deployment bucket..."
 
-if aws s3 ls "s3://${SAM_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
+if aws s3 ls "s3://${SAM_BUCKET}" --profile debitech 2>&1 | grep -q 'NoSuchBucket'; then
   echo "📦 Creating SAM deployment bucket: ${SAM_BUCKET}"
-  aws s3 mb "s3://${SAM_BUCKET}" --region ${AWS_REGION}
+  aws s3 mb "s3://${SAM_BUCKET}" --region ${AWS_REGION} --profile debitech
   
   # Enable versioning for the bucket
   aws s3api put-bucket-versioning \
     --bucket ${SAM_BUCKET} \
-    --versioning-configuration Status=Enabled
+    --versioning-configuration Status=Enabled \
+    --profile debitech
   
   echo "✅ SAM deployment bucket created"
 else
@@ -66,7 +67,7 @@ echo ""
 # Deploy Backend
 cd backend
 sam build
-sam deploy --stack-name loan-admin-backend-$STAGE --parameter-overrides Stage=$STAGE --s3-bucket ${SAM_BUCKET}
+sam deploy --stack-name loan-admin-backend-$STAGE --parameter-overrides Stage=$STAGE --s3-bucket ${SAM_BUCKET} --profile debitech
 
 echo ""
 echo "✅ Backend deployed successfully!"
@@ -77,7 +78,8 @@ echo "🔍 Retrieving API URL..."
 API_URL=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-backend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 if [ -z "$API_URL" ]; then
   echo "❌ Error: Could not retrieve API URL"
@@ -97,25 +99,29 @@ echo "📦 Deploying frontend infrastructure..."
 cd ../infrastructure
 
 # Check if stack already exists
-if aws cloudformation describe-stacks --stack-name loan-admin-frontend-$STAGE &> /dev/null; then
+if aws cloudformation describe-stacks --stack-name loan-admin-frontend-$STAGE --profile debitech &> /dev/null; then
   echo "Stack already exists, updating..."
   aws cloudformation update-stack \
     --stack-name loan-admin-frontend-$STAGE \
     --template-body file://frontend-template-simple.yaml \
-    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER || echo "No updates needed"
+    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER \
+    --profile debitech || echo "No updates needed"
   
   aws cloudformation wait stack-update-complete \
-    --stack-name loan-admin-frontend-$STAGE 2>/dev/null || true
+    --stack-name loan-admin-frontend-$STAGE \
+    --profile debitech 2>/dev/null || true
 else
   echo "Creating new stack..."
   aws cloudformation create-stack \
     --stack-name loan-admin-frontend-$STAGE \
     --template-body file://frontend-template-simple.yaml \
-    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER
+    --parameters ParameterKey=Stage,ParameterValue=$STAGE_LOWER \
+    --profile debitech
   
   echo "⏳ Waiting for stack creation..."
   aws cloudformation wait stack-create-complete \
-    --stack-name loan-admin-frontend-$STAGE
+    --stack-name loan-admin-frontend-$STAGE \
+    --profile debitech
 fi
 
 echo ""
@@ -138,16 +144,18 @@ echo "🔍 Retrieving S3 bucket information..."
 BUCKET_NAME=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-frontend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 WEBSITE_URL=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-frontend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 # Upload to S3
 echo "📤 Uploading frontend to S3..."
-aws s3 sync build/ s3://$BUCKET_NAME/ --delete
+aws s3 sync build/ s3://$BUCKET_NAME/ --delete --profile debitech
 
 echo ""
 echo "=========================================="

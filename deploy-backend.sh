@@ -19,21 +19,22 @@ echo "=========================================="
 echo ""
 
 # Get AWS region and account ID
-AWS_REGION=$(aws configure get region || echo "us-east-1")
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION=$(aws configure get region --profile debitech || echo "us-east-1")
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile debitech)
 
 # Create SAM deployment bucket if it doesn't exist
 SAM_BUCKET="aws-sam-cli-managed-default-samclisourcebucket-${AWS_ACCOUNT_ID}"
 echo "🔍 Checking SAM deployment bucket..."
 
-if aws s3 ls "s3://${SAM_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
+if aws s3 ls "s3://${SAM_BUCKET}" --profile debitech 2>&1 | grep -q 'NoSuchBucket'; then
   echo "📦 Creating SAM deployment bucket: ${SAM_BUCKET}"
-  aws s3 mb "s3://${SAM_BUCKET}" --region ${AWS_REGION}
+  aws s3 mb "s3://${SAM_BUCKET}" --region ${AWS_REGION} --profile debitech
   
   # Enable versioning for the bucket
   aws s3api put-bucket-versioning \
     --bucket ${SAM_BUCKET} \
-    --versioning-configuration Status=Enabled
+    --versioning-configuration Status=Enabled \
+    --profile debitech
   
   echo "✅ SAM deployment bucket created"
 else
@@ -46,7 +47,7 @@ echo ""
 echo "📦 Building and deploying backend..."
 cd backend
 sam build
-sam deploy --stack-name loan-admin-backend-$STAGE --parameter-overrides Stage=$STAGE --s3-bucket ${SAM_BUCKET}
+sam deploy --stack-name loan-admin-backend-$STAGE --parameter-overrides Stage=$STAGE --s3-bucket ${SAM_BUCKET} --profile debitech
 
 echo ""
 echo "✅ Backend deployed successfully!"
@@ -57,7 +58,8 @@ echo "🔍 Retrieving API URL..."
 API_URL=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-backend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 if [ -z "$API_URL" ]; then
   echo "❌ Error: Could not retrieve API URL"
@@ -68,12 +70,14 @@ fi
 LOANS_TABLE=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-backend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`LoansTableName`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 BORROWERS_TABLE=$(aws cloudformation describe-stacks \
   --stack-name loan-admin-backend-$STAGE \
   --query 'Stacks[0].Outputs[?OutputKey==`BorrowersTableName`].OutputValue' \
-  --output text)
+  --output text \
+  --profile debitech)
 
 echo ""
 echo "=========================================="

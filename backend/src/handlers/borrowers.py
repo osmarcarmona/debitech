@@ -10,18 +10,11 @@ def create_borrower(event, context):
     try:
         body = json.loads(event['body'])
         
-        # Check if email already exists
-        existing = db_service.get_borrower_by_email(body['email'])
-        if existing:
-            return error_response('Borrower with this email already exists', 400)
-        
         borrower_id = str(uuid.uuid4())
         borrower = {
             'borrowerId': borrower_id,
             'name': body['name'],
-            'email': body['email'],
             'phone': body['phone'],
-            'creditScore': body.get('creditScore'),
             'status': 'active',
             'createdAt': datetime.utcnow().isoformat(),
             'updatedAt': datetime.utcnow().isoformat()

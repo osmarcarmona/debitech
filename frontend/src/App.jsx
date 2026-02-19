@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { CssBaseline, AppBar, Toolbar, Typography, Container, Tabs, Tab, Select, MenuItem, Box } from '@mui/material';
 import LoanList from './components/LoanList';
 import LoanDetails from './components/LoanDetails';
 import CreateLoan from './components/CreateLoan';
@@ -7,7 +9,17 @@ import BorrowerList from './components/BorrowerList';
 import CreateBorrower from './components/CreateBorrower';
 import Reports from './components/Reports';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-import './App.css';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#007bff',
+    },
+    secondary: {
+      main: '#6c757d',
+    },
+  },
+});
 
 function MainContent() {
   const navigate = useNavigate();
@@ -25,50 +37,44 @@ function MainContent() {
   const activeTab = getActiveTab();
 
   return (
-    <div className="App">
-      <header>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>{t.appTitle}</h1>
-          <select 
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            {t.appTitle}
+          </Typography>
+          <Select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            style={{ 
-              padding: '8px 16px',
-              background: '#007bff',
+            sx={{ 
               color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px'
+              '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+              '.MuiSvgIcon-root': { color: 'white' }
             }}
           >
-            <option value="es" style={{ background: 'white', color: 'black' }}>Español</option>
-            <option value="en" style={{ background: 'white', color: 'black' }}>English</option>
-          </select>
-        </div>
-        <nav className="tabs">
-          <button
-            className={activeTab === 'borrowers' ? 'active' : ''}
-            onClick={() => navigate('/')}
-          >
-            {t.borrowersTab}
-          </button>
-          <button
-            className={activeTab === 'loans' ? 'active' : ''}
-            onClick={() => navigate('/loans')}
-          >
-            {t.loansTab}
-          </button>
-          <button
-            className={activeTab === 'reports' ? 'active' : ''}
-            onClick={() => navigate('/reports')}
-          >
-            {t.reportsTab}
-          </button>
-        </nav>
-      </header>
-      <main>
+            <MenuItem value="es">Español</MenuItem>
+            <MenuItem value="en">English</MenuItem>
+          </Select>
+        </Toolbar>
+        <Tabs 
+          value={activeTab} 
+          onChange={(e, newValue) => {
+            if (newValue === 'borrowers') navigate('/');
+            else if (newValue === 'loans') navigate('/loans');
+            else if (newValue === 'reports') navigate('/reports');
+          }}
+          sx={{ bgcolor: 'primary.dark' }}
+          textColor="inherit"
+          indicatorColor="secondary"
+        >
+          <Tab label={t.borrowersTab} value="borrowers" />
+          <Tab label={t.loansTab} value="loans" />
+          <Tab label={t.reportsTab} value="reports" />
+        </Tabs>
+      </AppBar>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
         <Routes>
           <Route path="/" element={
             <>
@@ -85,18 +91,21 @@ function MainContent() {
           <Route path="/loans/:id" element={<LoanDetails />} />
           <Route path="/reports" element={<Reports />} />
         </Routes>
-      </main>
-    </div>
+      </Container>
+    </Box>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <LanguageProvider>
-        <MainContent />
-      </LanguageProvider>
-    </Router>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <LanguageProvider>
+          <MainContent />
+        </LanguageProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 

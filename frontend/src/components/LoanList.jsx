@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel, OutlinedInput, Chip, Link, CircularProgress, TableSortLabel, Box } from '@mui/material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -8,7 +9,6 @@ const LoanList = () => {
   const { t } = useLanguage();
   const [loans, setLoans] = useState([]);
   const [borrowers, setBorrowers] = useState({});
-  const [payments, setPayments] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState(['approved', 'active']);
   const [sortField, setSortField] = useState('approvedAt');
@@ -37,20 +37,6 @@ const LoanList = () => {
         borrowerMap[b.borrowerId] = b.name;
       });
       setBorrowers(borrowerMap);
-
-      // Fetch payments for each loan
-      const paymentsMap = {};
-      await Promise.all(
-        filteredLoans.map(async (loan) => {
-          try {
-            const paymentsResponse = await loanService.getPayments(loan.loanId);
-            paymentsMap[loan.loanId] = paymentsResponse.data;
-          } catch (error) {
-            paymentsMap[loan.loanId] = [];
-          }
-        })
-      );
-      setPayments(paymentsMap);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -67,58 +53,9 @@ const LoanList = () => {
     }
   };
 
-  const calculateAccruedInterest = (loan) => {
-    if (!loan || !loan.approvedAt) return 0;
-    
-    const approvedDate = new Date(loan.approvedAt);
-    const currentDate = new Date();
-    
-    // Set both dates to start of day for accurate day calculation
-    approvedDate.setHours(0, 0, 0, 0);
-    currentDate.setHours(0, 0, 0, 0);
-    
-    const daysElapsed = (currentDate - approvedDate) / (1000 * 60 * 60 * 24);
-    
-    // Interest starts accruing from day 1
-    if (daysElapsed < 0) return 0;
-    
-    const principal = parseFloat(loan.amount);
-    const monthlyRate = parseFloat(loan.interestRate) / 100; // Interest rate is monthly
-    
-    // Calculate monthly interest amount
-    const monthlyInterestAmount = principal * monthlyRate;
-    
-    // Calculate months elapsed (using 30 days per month)
-    const monthsElapsed = daysElapsed / 30;
-    
-    // Calculate number of complete billing cycles
-    const completedCycles = Math.floor(monthsElapsed);
-    const daysIntoCurrentCycle = daysElapsed - (completedCycles * 30);
-    
-    // If we're at least 1 day into a new cycle, count it as a full cycle
-    const billingCycles = daysIntoCurrentCycle >= 1 ? completedCycles + 1 : completedCycles;
-    
-    // Calculate total accrued interest (full interest per cycle) - no cap on term months
-    const accruedInterest = monthlyInterestAmount * billingCycles;
-    
-    return accruedInterest;
-  };
-
-  const calculateTotalPaid = (loanId) => {
-    const loanPayments = payments[loanId] || [];
-    return loanPayments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0);
-  };
-
-  const calculateTotalAmount = (loan) => {
-    const principal = parseFloat(loan.amount);
-    const accruedInterest = calculateAccruedInterest(loan);
-    return principal + accruedInterest;
-  };
-
-  const calculatePendingToPay = (loan) => {
-    const totalAmount = calculateTotalAmount(loan);
-    const totalPaid = calculateTotalPaid(loan.loanId);
-    return Math.max(0, totalAmount - totalPaid);
+  const getBalanceAmount = (loan) => {
+    // Use balanceAmount from the loan data, fallback to principal if not available
+    return loan.balanceAmount ? parseFloat(loan.balanceAmount) : parseFloat(loan.amount);
   };
 
   const getNextPaymentDate = (loan) => {
@@ -165,13 +102,9 @@ const LoanList = () => {
           aValue = parseFloat(a.interestRate);
           bValue = parseFloat(b.interestRate);
           break;
-        case 'totalAmount':
-          aValue = calculateTotalAmount(a);
-          bValue = calculateTotalAmount(b);
-          break;
         case 'pendingToPay':
-          aValue = calculatePendingToPay(a);
-          bValue = calculatePendingToPay(b);
+          aValue = getBalanceAmount(a);
+          bValue = getBalanceAmount(b);
           break;
         case 'approvedAt':
           aValue = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
@@ -193,125 +126,144 @@ const LoanList = () => {
     return sorted;
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <CircularProgress sx={{ display: 'block', margin: '2rem auto' }} />;
 
   return (
-    <div className="loan-list">
-      <h2>{t.loans}</h2>
-      <div style={{ marginBottom: '1rem' }}>
-        <label>{t.filterByStatus}: </label>
-        <select 
+    <Paper elevation={3} sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom>{t.loans}</Typography>
+      <FormControl sx={{ mb: 3, minWidth: 200 }}>
+        <InputLabel>{t.filterByStatus}</InputLabel>
+        <Select
           multiple
-          value={statusFilter} 
-          onChange={(e) => {
-            const selected = Array.from(e.target.selectedOptions, option => option.value);
-            setStatusFilter(selected);
-          }}
-          style={{ minHeight: '120px', minWidth: '150px' }}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          input={<OutlinedInput label={t.filterByStatus} />}
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {selected.map((value) => (
+                <Chip key={value} label={t[value]} size="small" />
+              ))}
+            </Box>
+          )}
         >
-          <option value="pending">{t.pending}</option>
-          <option value="approved">{t.approved}</option>
-          <option value="active">{t.active}</option>
-          <option value="paid">{t.paid}</option>
-          <option value="defaulted">{t.defaulted}</option>
-        </select>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>{t.loanId}</th>
-            <th 
-              onClick={() => handleSort('borrower')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.borrower} {sortField === 'borrower' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('amount')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.amount} {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('interestRate')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.interestRate} {sortField === 'interestRate' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('totalAmount')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.totalAmount} {sortField === 'totalAmount' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('pendingToPay')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.pendingToPay} {sortField === 'pendingToPay' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('approvedAt')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.approvedDate} {sortField === 'approvedAt' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th 
-              onClick={() => handleSort('nextPaymentDue')} 
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              {t.nextPaymentDue} {sortField === 'nextPaymentDue' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </th>
-            <th>{t.actions}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {getSortedLoans().map((loan) => (
-            <tr key={loan.loanId}>
-              <td>
-                <a 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); navigate(`/loans/${loan.loanId}`); }}
-                  style={{ color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
-                  title={loan.loanId}
+          <MenuItem value="pending">{t.pending}</MenuItem>
+          <MenuItem value="approved">{t.approved}</MenuItem>
+          <MenuItem value="active">{t.active}</MenuItem>
+          <MenuItem value="paid">{t.paid}</MenuItem>
+          <MenuItem value="defaulted">{t.defaulted}</MenuItem>
+        </Select>
+      </FormControl>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'borrower'}
+                  direction={sortField === 'borrower' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('borrower')}
                 >
-                  {loan.loanId.substring(0, 4)}
-                </a>
-              </td>
-              <td>{borrowers[loan.borrowerId] || loan.borrowerId}</td>
-              <td>${parseFloat(loan.amount).toFixed(2)}</td>
-              <td>{loan.interestRate}%</td>
-              <td>${calculateTotalAmount(loan).toFixed(2)}</td>
-              <td style={{ 
-                color: calculatePendingToPay(loan) > 0 ? '#dc3545' : '#28a745',
-                fontWeight: 'bold'
-              }}>
-                ${calculatePendingToPay(loan).toFixed(2)}
-              </td>
-              <td>{loan.approvedAt ? new Date(loan.approvedAt).toLocaleDateString() : '-'}</td>
-              <td style={{ color: '#ff6b6b' }}>
-                {getNextPaymentDate(loan) 
-                  ? getNextPaymentDate(loan).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                  : '-'
-                }
-              </td>
-              <td>
-                <select
-                  value={loan.status}
-                  onChange={(e) => updateStatus(loan.loanId, e.target.value)}
+                  {t.borrower}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'amount'}
+                  direction={sortField === 'amount' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('amount')}
                 >
-                  <option value="pending">{t.pending}</option>
-                  <option value="approved">{t.approved}</option>
-                  <option value="active">{t.active}</option>
-                  <option value="paid">{t.paid}</option>
-                  <option value="defaulted">{t.defaulted}</option>
-                </select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  {t.amount}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'interestRate'}
+                  direction={sortField === 'interestRate' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('interestRate')}
+                >
+                  {t.interestRate}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'pendingToPay'}
+                  direction={sortField === 'pendingToPay' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('pendingToPay')}
+                >
+                  {t.pendingToPay}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'approvedAt'}
+                  direction={sortField === 'approvedAt' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('approvedAt')}
+                >
+                  {t.approvedDate}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortField === 'nextPaymentDue'}
+                  direction={sortField === 'nextPaymentDue' ? sortDirection : 'asc'}
+                  onClick={() => handleSort('nextPaymentDue')}
+                >
+                  {t.nextPaymentDue}
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>{t.actions}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {getSortedLoans().map((loan) => (
+              <TableRow key={loan.loanId} hover>
+                <TableCell>
+                  <Link
+                    href={`/loans/${loan.loanId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="body2"
+                    title={loan.loanId}
+                  >
+                    {loan.loanId.substring(0, 4)}
+                  </Link>
+                </TableCell>
+                <TableCell>{borrowers[loan.borrowerId] || loan.borrowerId}</TableCell>
+                <TableCell>${parseFloat(loan.amount).toFixed(2)}</TableCell>
+                <TableCell>{loan.interestRate}%</TableCell>
+                <TableCell sx={{ 
+                  color: getBalanceAmount(loan) > 0 ? 'error.main' : 'success.main',
+                  fontWeight: 'bold'
+                }}>
+                  ${getBalanceAmount(loan).toFixed(2)}
+                </TableCell>
+                <TableCell>{loan.approvedAt ? new Date(loan.approvedAt).toLocaleDateString() : '-'}</TableCell>
+                <TableCell sx={{ color: 'error.light' }}>
+                  {getNextPaymentDate(loan) 
+                    ? getNextPaymentDate(loan).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '-'
+                  }
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={loan.status}
+                    onChange={(e) => updateStatus(loan.loanId, e.target.value)}
+                    size="small"
+                  >
+                    <MenuItem value="pending">{t.pending}</MenuItem>
+                    <MenuItem value="approved">{t.approved}</MenuItem>
+                    <MenuItem value="active">{t.active}</MenuItem>
+                    <MenuItem value="paid">{t.paid}</MenuItem>
+                    <MenuItem value="defaulted">{t.defaulted}</MenuItem>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
   );
 };
 

@@ -1,6 +1,7 @@
 import os
 import boto3
 from decimal import Decimal
+from datetime import datetime
 from typing import Dict, List, Optional
 
 class DynamoDBService:
@@ -73,15 +74,6 @@ class DynamoDBService:
         response = self.borrowers_table.scan()
         return response.get('Items', [])
     
-    def get_borrower_by_email(self, email: str) -> Optional[Dict]:
-        response = self.borrowers_table.query(
-            IndexName='EmailIndex',
-            KeyConditionExpression='email = :email',
-            ExpressionAttributeValues={':email': email}
-        )
-        items = response.get('Items', [])
-        return items[0] if items else None
-    
     def update_borrower(self, borrower_id: str, updates: Dict) -> None:
         update_expression = 'SET ' + ', '.join([f'#{k} = :{k}' for k in updates.keys()])
         expression_attribute_names = {f'#{k}': k for k in updates.keys()}
@@ -125,3 +117,26 @@ class DynamoDBService:
     
     def delete_payment(self, payment_id: str) -> None:
         self.payments_table.delete_item(Key={'paymentId': payment_id})
+    
+    def update_loan_balance(self, loan_id: str) -> None:
+        """Calculate and update the balance amount for a loan based on payments"""
+        # Get the loan
+        loan = self.get_loan(loan_id)
+        if not loan:
+            return
+        
+        # Get all payments for this loan
+        payments = self.get_payments_by_loan(loan_id)
+        
+        # Calculate total payments
+        total_paid = sum(Decimal(str(payment.get('amount', 0))) for payment in payments)
+        
+        # Calculate balance (principal - total paid)
+        principal = Decimal(str(loan.get('amount', 0)))
+        balance = principal - total_paid
+        
+        # Update the loan with new balance
+        self.update_loan(loan_id, {
+            'balanceAmount': balance,
+            'updatedAt': datetime.utcnow().isoformat()
+        })

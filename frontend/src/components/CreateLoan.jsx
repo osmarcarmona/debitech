@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Paper, TextField, Button, MenuItem, Typography, Box } from '@mui/material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -9,7 +10,7 @@ const CreateLoan = ({ onSuccess }) => {
     borrowerId: '',
     amount: '',
     interestRate: '',
-    approvedAt: '',
+    approvedAt: new Date().toISOString().split('T')[0], // Set today's date as default
   });
 
   useEffect(() => {
@@ -29,7 +30,12 @@ const CreateLoan = ({ onSuccess }) => {
     e.preventDefault();
     try {
       await loanService.createLoan(formData);
-      setFormData({ borrowerId: '', amount: '', interestRate: '', approvedAt: '' });
+      setFormData({ 
+        borrowerId: '', 
+        amount: '', 
+        interestRate: '', 
+        approvedAt: new Date().toISOString().split('T')[0] // Reset to today's date
+      });
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating loan:', error);
@@ -37,45 +43,53 @@ const CreateLoan = ({ onSuccess }) => {
   };
 
   return (
-    <div className="create-loan">
-      <h2>{t.createNewLoan}</h2>
-      <form onSubmit={handleSubmit}>
-        <select
+    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h5" gutterBottom>{t.createNewLoan}</Typography>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          select
+          label={t.selectBorrower}
           value={formData.borrowerId}
           onChange={(e) => setFormData({ ...formData, borrowerId: e.target.value })}
           required
+          fullWidth
         >
-          <option value="">{t.selectBorrower}</option>
           {borrowers.map((b) => (
-            <option key={b.borrowerId} value={b.borrowerId}>
+            <MenuItem key={b.borrowerId} value={b.borrowerId}>
               {b.name}
-            </option>
+            </MenuItem>
           ))}
-        </select>
-        <input
+        </TextField>
+        <TextField
           type="number"
-          placeholder={t.amount}
+          label={t.amount}
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
+          fullWidth
         />
-        <input
+        <TextField
           type="number"
-          step="0.01"
-          placeholder={`${t.interestRate} (%)`}
+          label={`${t.interestRate} (%)`}
           value={formData.interestRate}
           onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+          inputProps={{ step: '0.01' }}
           required
+          fullWidth
         />
-        <input
+        <TextField
           type="date"
-          placeholder={t.approvalDate}
+          label={t.approvalDate}
           value={formData.approvedAt}
           onChange={(e) => setFormData({ ...formData, approvedAt: e.target.value })}
+          InputLabelProps={{ shrink: true }}
+          fullWidth
         />
-        <button type="submit">{t.createLoan}</button>
-      </form>
-    </div>
+        <Button type="submit" variant="contained" size="large">
+          {t.createLoan}
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 

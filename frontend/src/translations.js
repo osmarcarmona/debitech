@@ -35,7 +35,6 @@ export const translations = {
     createBorrower: 'Create Borrower',
     creating: 'Creating...',
     fullName: 'Full Name',
-    creditScoreOptional: 'Credit Score (optional)',
     failedToCreateBorrower: 'Failed to create borrower',
     
     // Loan Details
@@ -44,6 +43,7 @@ export const translations = {
     loanInformation: 'Loan Information',
     loanId: 'Loan ID',
     principalAmount: 'Principal Amount',
+    balanceAmount: 'Balance Amount',
     interestRate: 'Interest Rate',
     monthInterestCycles: 'Month Interest Cycles',
     cycle: 'cycle',
@@ -58,9 +58,7 @@ export const translations = {
     numberOfPayments: 'Number of Payments',
     borrowerInformation: 'Borrower Information',
     name: 'Name',
-    email: 'Email',
     phone: 'Phone',
-    creditScore: 'Credit Score',
     timeline: 'Timeline',
     created: 'Created',
     approved: 'Approved',
@@ -147,7 +145,6 @@ export const translations = {
     createBorrower: 'Crear Prestatario',
     creating: 'Creando...',
     fullName: 'Nombre Completo',
-    creditScoreOptional: 'Puntaje de Crédito (opcional)',
     failedToCreateBorrower: 'Error al crear prestatario',
     
     // Loan Details
@@ -156,6 +153,7 @@ export const translations = {
     loanInformation: 'Información del Préstamo',
     loanId: 'ID del Préstamo',
     principalAmount: 'Monto Principal',
+    balanceAmount: 'Saldo Pendiente',
     interestRate: 'Tasa de Interés',
     monthInterestCycles: 'Ciclos de Interés Mensual',
     cycle: 'ciclo',
@@ -170,9 +168,7 @@ export const translations = {
     numberOfPayments: 'Número de Pagos',
     borrowerInformation: 'Información del Prestatario',
     name: 'Nombre',
-    email: 'Correo Electrónico',
     phone: 'Teléfono',
-    creditScore: 'Puntaje de Crédito',
     timeline: 'Línea de Tiempo',
     created: 'Creado',
     approved: 'Aprobado',

@@ -12,10 +12,12 @@ def create_loan(event, context):
         body = json.loads(event['body'])
         
         loan_id = str(uuid.uuid4())
+        amount = Decimal(str(body['amount']))
         loan = {
             'loanId': loan_id,
             'borrowerId': body['borrowerId'],
-            'amount': Decimal(str(body['amount'])),
+            'amount': amount,
+            'balanceAmount': amount,  # Initially, balance equals the principal amount
             'interestRate': Decimal(str(body['interestRate'])),
             'status': 'pending',
             'createdAt': datetime.utcnow().isoformat(),

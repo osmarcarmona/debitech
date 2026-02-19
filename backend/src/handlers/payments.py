@@ -27,6 +27,10 @@ def add_payment(event, context):
         }
         
         created_payment = db_service.create_payment(payment)
+        
+        # Update loan balance after adding payment
+        db_service.update_loan_balance(loan_id)
+        
         return success_response(created_payment, 201)
         
     except KeyError as e:
@@ -53,6 +57,8 @@ def update_payment(event, context):
         if not payment:
             return error_response('Payment not found', 404)
         
+        loan_id = payment.get('loanId')
+        
         updates = {}
         if 'amount' in body:
             updates['amount'] = Decimal(str(body['amount']))
@@ -62,6 +68,10 @@ def update_payment(event, context):
         if updates:
             updates['updatedAt'] = datetime.utcnow().isoformat()
             db_service.update_payment(payment_id, updates)
+            
+            # Update loan balance after updating payment
+            if loan_id:
+                db_service.update_loan_balance(loan_id)
         
         return success_response({'message': 'Payment updated', 'paymentId': payment_id})
         
@@ -79,7 +89,14 @@ def delete_payment(event, context):
         if not payment:
             return error_response('Payment not found', 404)
         
+        loan_id = payment.get('loanId')
+        
         db_service.delete_payment(payment_id)
+        
+        # Update loan balance after deleting payment
+        if loan_id:
+            db_service.update_loan_balance(loan_id)
+        
         return success_response({'message': 'Payment deleted', 'paymentId': payment_id})
         
     except Exception as e:

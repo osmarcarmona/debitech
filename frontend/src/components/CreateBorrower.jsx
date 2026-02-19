@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Paper, TextField, Button, Typography, Box, Alert } from '@mui/material';
 import { borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -6,9 +7,7 @@ const CreateBorrower = ({ onSuccess }) => {
   const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
-    creditScore: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,16 +20,11 @@ const CreateBorrower = ({ onSuccess }) => {
     try {
       const borrowerData = {
         name: formData.name,
-        email: formData.email,
         phone: formData.phone,
       };
 
-      if (formData.creditScore) {
-        borrowerData.creditScore = parseInt(formData.creditScore);
-      }
-
       await borrowerService.createBorrower(borrowerData);
-      setFormData({ name: '', email: '', phone: '', creditScore: '' });
+      setFormData({ name: '', phone: '' });
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating borrower:', error);
@@ -45,48 +39,32 @@ const CreateBorrower = ({ onSuccess }) => {
   };
 
   return (
-    <div className="create-borrower">
-      <h2>{t.createNewBorrower}</h2>
-      {error && <div className="error-message">{error}</div>}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
+    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h5" gutterBottom>{t.createNewBorrower}</Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
           name="name"
-          placeholder={t.fullName}
+          label={t.fullName}
           value={formData.name}
           onChange={handleChange}
           required
+          fullWidth
         />
-        <input
-          type="email"
-          name="email"
-          placeholder={t.email}
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-        <input
+        <TextField
           type="tel"
           name="phone"
-          placeholder={t.phoneNumber}
+          label={t.phoneNumber}
           value={formData.phone}
           onChange={handleChange}
           required
+          fullWidth
         />
-        <input
-          type="number"
-          name="creditScore"
-          placeholder={t.creditScoreOptional}
-          value={formData.creditScore}
-          onChange={handleChange}
-          min="300"
-          max="850"
-        />
-        <button type="submit" disabled={loading}>
+        <Button type="submit" variant="contained" size="large" disabled={loading}>
           {loading ? t.creating : t.createBorrower}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 
