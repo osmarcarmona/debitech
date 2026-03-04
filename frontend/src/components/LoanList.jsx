@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel, OutlinedInput, Chip, Link, CircularProgress, TableSortLabel, Box } from '@mui/material';
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel, OutlinedInput, Chip, Link, CircularProgress, TableSortLabel, Box, IconButton } from '@mui/material';
+import { Delete } from '@mui/icons-material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -50,6 +51,21 @@ const LoanList = () => {
       fetchData();
     } catch (error) {
       console.error('Error updating loan status:', error);
+    }
+  };
+
+  const handleDeleteLoan = async (loanId, event) => {
+    // Stop event propagation to prevent row click
+    event.stopPropagation();
+    
+    if (window.confirm(t.confirmDeleteLoan || 'Are you sure you want to delete this loan? This will also delete all associated payments. This action cannot be undone.')) {
+      try {
+        await loanService.deleteLoan(loanId);
+        fetchData(); // Refresh the list
+      } catch (error) {
+        console.error('Error deleting loan:', error);
+        alert('Failed to delete loan. Please try again.');
+      }
     }
   };
 
@@ -246,17 +262,27 @@ const LoanList = () => {
                   }
                 </TableCell>
                 <TableCell>
-                  <Select
-                    value={loan.status}
-                    onChange={(e) => updateStatus(loan.loanId, e.target.value)}
-                    size="small"
-                  >
-                    <MenuItem value="pending">{t.pending}</MenuItem>
-                    <MenuItem value="approved">{t.approved}</MenuItem>
-                    <MenuItem value="active">{t.active}</MenuItem>
-                    <MenuItem value="paid">{t.paid}</MenuItem>
-                    <MenuItem value="defaulted">{t.defaulted}</MenuItem>
-                  </Select>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Select
+                      value={loan.status}
+                      onChange={(e) => updateStatus(loan.loanId, e.target.value)}
+                      size="small"
+                    >
+                      <MenuItem value="pending">{t.pending}</MenuItem>
+                      <MenuItem value="approved">{t.approved}</MenuItem>
+                      <MenuItem value="active">{t.active}</MenuItem>
+                      <MenuItem value="paid">{t.paid}</MenuItem>
+                      <MenuItem value="defaulted">{t.defaulted}</MenuItem>
+                    </Select>
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={(e) => handleDeleteLoan(loan.loanId, e)}
+                      title={t.deleteLoan}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}

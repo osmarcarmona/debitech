@@ -14,10 +14,12 @@ export const loanService = {
   getLoan: (id) => api.get(`/loans/${id}`),
   createLoan: (loan) => api.post('/loans', loan),
   updateLoanStatus: (id, status) => api.put(`/loans/${id}/status`, { status }),
+  deleteLoan: (id) => api.delete(`/loans/${id}`),
   getPayments: (id) => api.get(`/loans/${id}/payments`),
   addPayment: (id, payment) => api.post(`/loans/${id}/payments`, payment),
   updatePayment: (paymentId, payment) => api.put(`/payments/${paymentId}`, payment),
   deletePayment: (paymentId) => api.delete(`/payments/${paymentId}`),
+  getInterestCycles: (id) => api.get(`/loans/${id}/interest-cycles`),
 };
 
 export const borrowerService = {

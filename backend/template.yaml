@@ -26,6 +26,7 @@ Globals:
         LOANS_TABLE: !Ref LoansTable
         BORROWERS_TABLE: !Ref BorrowersTable
         PAYMENTS_TABLE: !Ref PaymentsTable
+        INTEREST_CYCLES_TABLE: !Ref InterestCyclesTable
         STAGE: !Ref Stage
     Tracing: PassThrough
     LoggingConfig:
@@ -126,6 +127,40 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  InterestCyclesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub InterestCycles-${Stage}
+      AttributeDefinitions:
+        - AttributeName: cycleId
+          AttributeType: S
+        - AttributeName: loanId
+          AttributeType: S
+        - AttributeName: cycleStartDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: cycleId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: LoanIdIndex
+          KeySchema:
+            - AttributeName: loanId
+              KeyType: HASH
+            - AttributeName: cycleStartDate
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Application
+          Value: LoanAdministration
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   # API Gateway
   LoanApi:
     Type: AWS::Serverless::Api
@@ -158,6 +193,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LoansTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InterestCyclesTable
       Events:
         CreateLoan:
           Type: Api
@@ -209,6 +246,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LoansTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InterestCyclesTable
       Events:
         UpdateLoanStatus:
           Type: Api
@@ -216,6 +255,25 @@ Resources:
             RestApiId: !Ref LoanApi
             Path: /loans/{id}/status
             Method: put
+
+  DeleteLoanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub DeleteLoan-${Stage}
+      CodeUri: src/
+      Handler: handlers.loans.delete_loan
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+      Events:
+        DeleteLoan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}
+            Method: delete
 
   # Lambda Functions - Borrowers
   CreateBorrowerFunction:
@@ -366,6 +424,49 @@ Resources:
           Properties:
             RestApiId: !Ref LoanApi
             Path: /reports
+            Method: get
+
+  # Lambda Functions - Scheduled Jobs
+  ProcessInterestCyclesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ProcessInterestCycles-${Stage}
+      CodeUri: src/
+      Handler: handlers.interest_cycles.process_daily_cycles
+      Timeout: 300
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InterestCyclesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6 * * ? *)
+            Description: Process interest cycles daily at 6 AM UTC
+            Enabled: true
+
+  # Lambda Functions - Interest Cycles API
+  GetInterestCyclesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GetInterestCycles-${Stage}
+      CodeUri: src/
+      Handler: handlers.interest_cycles.get_interest_cycles
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref InterestCyclesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref LoansTable
+      Events:
+        GetInterestCycles:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LoanApi
+            Path: /loans/{id}/interest-cycles
             Method: get
 
 Outputs:

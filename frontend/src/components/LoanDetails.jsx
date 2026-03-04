@@ -12,14 +12,17 @@ const LoanDetails = () => {
   const [loan, setLoan] = useState(null);
   const [borrower, setBorrower] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [interestCycles, setInterestCycles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newPayment, setNewPayment] = useState({ 
     amount: '', 
+    paymentType: 'capital', // Default to capital payment
     paymentDate: new Date().toISOString().split('T')[0] // Set today's date as default
   });
   const [editingPayment, setEditingPayment] = useState(null);
   const [paymentError, setPaymentError] = useState('');
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState('all'); // Filter for payment list
 
   useEffect(() => {
     fetchLoanDetails();
@@ -28,13 +31,15 @@ const LoanDetails = () => {
   const fetchLoanDetails = async () => {
     try {
       setLoading(true);
-      const [loanResponse, paymentsResponse] = await Promise.all([
+      const [loanResponse, paymentsResponse, cyclesResponse] = await Promise.all([
         loanService.getLoan(id),
-        loanService.getPayments(id).catch(() => ({ data: [] }))
+        loanService.getPayments(id).catch(() => ({ data: [] })),
+        loanService.getInterestCycles(id).catch(() => ({ data: [] }))
       ]);
       
       setLoan(loanResponse.data);
       setPayments(paymentsResponse.data);
+      setInterestCycles(cyclesResponse.data);
 
       if (loanResponse.data.borrowerId) {
         const borrowerResponse = await borrowerService.getBorrower(loanResponse.data.borrowerId);
@@ -57,6 +62,18 @@ const LoanDetails = () => {
     }
   };
 
+  const handleDeleteLoan = async () => {
+    if (window.confirm(t.confirmDeleteLoan || 'Are you sure you want to delete this loan? This will also delete all associated payments. This action cannot be undone.')) {
+      try {
+        await loanService.deleteLoan(id);
+        navigate('/loans');
+      } catch (error) {
+        console.error('Error deleting loan:', error);
+        setError('Failed to delete loan. Please try again.');
+      }
+    }
+  };
+
   const handleAddPayment = async (e) => {
     e.preventDefault();
     setPaymentError('');
@@ -74,6 +91,7 @@ const LoanDetails = () => {
       await loanService.addPayment(id, newPayment);
       setNewPayment({ 
         amount: '', 
+        paymentType: 'capital', // Reset to capital
         paymentDate: new Date().toISOString().split('T')[0] // Reset to today's date
       });
       fetchLoanDetails();
@@ -125,6 +143,7 @@ const LoanDetails = () => {
     setEditingPayment({
       paymentId: payment.paymentId,
       amount: payment.amount,
+      paymentType: payment.paymentType || 'capital',
       paymentDate: payment.paymentDate
     });
   };
@@ -138,6 +157,12 @@ const LoanDetails = () => {
   };
 
   const calculateAccruedInterest = () => {
+    // Use backend interest cycles data if available
+    if (interestCycles && interestCycles.length > 0) {
+      return interestCycles.reduce((sum, cycle) => sum + parseFloat(cycle.interestAmount), 0);
+    }
+    
+    // Fallback calculation if no backend data
     if (!loan || !loan.approvedAt) return 0;
     
     const approvedDate = new Date(loan.approvedAt);
@@ -147,41 +172,30 @@ const LoanDetails = () => {
     approvedDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
     
-    const daysElapsed = (currentDate - approvedDate) / (1000 * 60 * 60 * 24);
-    
-    // Interest starts accruing from day 1
-    if (daysElapsed < 0) return 0;
-    
+    // Interest starts accruing from day 0 (approval day)
+    if (currentDate < approvedDate) return 0;
+
     const principal = parseFloat(loan.amount);
-    const monthlyRate = parseFloat(loan.interestRate) / 100; // Interest rate is monthly
-    
-    // Calculate monthly interest amount
+    const monthlyRate = parseFloat(loan.interestRate) / 100;
     const monthlyInterestAmount = principal * monthlyRate;
     
-    // Calculate months elapsed (using 30 days per month)
-    const monthsElapsed = daysElapsed / 30;
+    // Calculate complete calendar months elapsed
+    const yearsDiff = currentDate.getFullYear() - approvedDate.getFullYear();
+    const monthsDiff = currentDate.getMonth() - approvedDate.getMonth();
+    const daysDiff = currentDate.getDate() - approvedDate.getDate();
     
-    // Calculate number of complete billing cycles
-    const completedCycles = Math.floor(monthsElapsed);
-    const daysIntoCurrentCycle = daysElapsed - (completedCycles * 30);
+    // Calculate total months difference
+    let totalMonths = yearsDiff * 12 + monthsDiff;
     
-    console.log("Approved Date:", approvedDate.toISOString());
-    console.log("Current Date:", currentDate.toISOString());
-    console.log("Days Elapsed:", daysElapsed);
-    console.log("Months Elapsed:", monthsElapsed);
-    console.log("Completed Cycles:", completedCycles);
-    console.log("Days Into Current Cycle:", daysIntoCurrentCycle);
+    // If we're on or past the approval day, count it as a complete cycle
+    if (daysDiff >= 0) {
+      totalMonths += 1;
+    }
     
-    // If we're at least 1 day into a new cycle, count it as a full cycle
-    const billingCycles = daysIntoCurrentCycle >= 1 ? completedCycles + 1 : completedCycles;
+    const finalBillingCycles = Math.max(0, totalMonths);
     
-    console.log("Billing Cycles:", billingCycles);
-    
-    // Calculate total accrued interest (full interest per cycle) - no cap on term months
-    const accruedInterest = monthlyInterestAmount * billingCycles;
-    
-    console.log("Monthly Interest Amount:", monthlyInterestAmount);
-    console.log("Accrued Interest:", accruedInterest);
+    // Calculate total accrued interest (full interest per cycle)
+    const accruedInterest = monthlyInterestAmount * finalBillingCycles;
     
     return accruedInterest;
   };
@@ -196,18 +210,45 @@ const LoanDetails = () => {
     approvedDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
     
-    const daysElapsed = (currentDate - approvedDate) / (1000 * 60 * 60 * 24);
+    if (currentDate < approvedDate) return 0;
     
-    if (daysElapsed < 0) return 0;
+    // Calculate complete calendar months elapsed
+    const yearsDiff = currentDate.getFullYear() - approvedDate.getFullYear();
+    const monthsDiff = currentDate.getMonth() - approvedDate.getMonth();
+    const daysDiff = currentDate.getDate() - approvedDate.getDate();
     
-    const monthsElapsed = daysElapsed / 30;
-    const completedCycles = Math.floor(monthsElapsed);
-    const daysIntoCurrentCycle = daysElapsed - (completedCycles * 30);
+    // Calculate total months difference
+    let totalMonths = yearsDiff * 12 + monthsDiff;
     
-    // If we're at least 1 day into a new cycle, count it as a full cycle
-    const billingCycles = daysIntoCurrentCycle >= 1 ? completedCycles + 1 : completedCycles;
+    // If we're on or past the approval day in the current month, count it as a complete cycle
+    if (daysDiff >= 0) {
+      totalMonths += 1;
+    }
     
-    return billingCycles;
+    return Math.max(0, totalMonths);
+  };
+
+  const getInterestBreakdown = () => {
+    // Use interest cycles from the backend only
+    if (interestCycles && interestCycles.length > 0) {
+      return interestCycles.map(cycle => ({
+        cycle: cycle.cycleNumber,
+        startDate: new Date(cycle.cycleStartDate),
+        endDate: new Date(cycle.cycleEndDate),
+        amount: parseFloat(cycle.interestAmount),
+        principalBalance: parseFloat(cycle.principalBalance)
+      }));
+    }
+    
+    // Return empty array if no backend data
+    return [];
+  };
+
+  const formatDateDDMMYYYY = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const calculateDueAmount = () => {
@@ -231,15 +272,15 @@ const LoanDetails = () => {
     const approvedDate = new Date(loan.approvedAt);
     const currentDate = new Date();
     
-    // Calculate next payment date (one month from approval)
-    const nextPaymentDate = new Date(approvedDate);
-    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+    approvedDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
     
-    // If we're past the first payment, calculate the next upcoming payment
-    if (currentDate > nextPaymentDate) {
-      const monthsSinceApproval = Math.floor((currentDate - approvedDate) / (1000 * 60 * 60 * 24 * 30));
-      nextPaymentDate.setMonth(approvedDate.getMonth() + monthsSinceApproval + 1);
-    }
+    // Calculate the next payment date based on calendar months
+    const billingCycles = calculateBillingCycles();
+    
+    // Next payment is due at the start of the next billing cycle
+    const nextPaymentDate = new Date(approvedDate);
+    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + billingCycles);
     
     return nextPaymentDate;
   };
@@ -249,22 +290,34 @@ const LoanDetails = () => {
   if (!loan) return <Alert severity="warning">Loan not found</Alert>;
 
   const totalPaid = calculateTotalPaid();
-  const accruedInterest = calculateAccruedInterest();
+  const totalAccruedInterest = calculateAccruedInterest();
+  const interestPaid = loan.balanceInterestAmount ? parseFloat(loan.balanceInterestAmount) : 0;
+  const outstandingInterest = totalAccruedInterest - interestPaid; // Interest accrued but not yet paid
   const dueAmount = calculateDueAmount();
-  const totalAmount = parseFloat(loan.amount) + accruedInterest;
+  const totalAmount = parseFloat(loan.amount) + totalAccruedInterest;
   const minimalBasePayment = calculateMinimalBasePayment();
   const nextPaymentDate = getNextPaymentDate();
   const billingCycles = calculateBillingCycles();
+  const interestBreakdown = getInterestBreakdown();
 
   return (
     <Box>
-      <Button 
-        startIcon={<ArrowBack />} 
-        onClick={() => navigate(-1)} 
-        sx={{ mb: 2 }}
-      >
-        {t.backToLoans}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button 
+          startIcon={<ArrowBack />} 
+          onClick={() => navigate(-1)}
+        >
+          {t.backToLoans}
+        </Button>
+        <Button 
+          variant="outlined"
+          color="error"
+          startIcon={<Delete />}
+          onClick={handleDeleteLoan}
+        >
+          {t.deleteLoan}
+        </Button>
+      </Box>
       
       <Typography variant="h4" gutterBottom>{t.loanDetails}</Typography>
       
@@ -301,7 +354,7 @@ const LoanDetails = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography color="text.secondary">{t.accruedInterest}:</Typography>
                   <Typography color="error" fontWeight="bold">
-                    ${accruedInterest.toFixed(2)}
+                    ${outstandingInterest.toFixed(2)}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -350,6 +403,18 @@ const LoanDetails = () => {
                   <Typography color="text.secondary">{t.totalPaid}:</Typography>
                   <Typography color="success.main" fontWeight="bold">
                     ${totalPaid.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.capitalPaid}:</Typography>
+                  <Typography color="success.main" fontWeight="bold">
+                    ${(parseFloat(loan.amount) - (loan.balanceAmount ? parseFloat(loan.balanceAmount) : parseFloat(loan.amount))).toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography color="text.secondary">{t.interestPaid}:</Typography>
+                  <Typography color="info.main" fontWeight="bold">
+                    ${loan.balanceInterestAmount ? parseFloat(loan.balanceInterestAmount).toFixed(2) : '0.00'}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -439,13 +504,38 @@ const LoanDetails = () => {
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
+            <TextField
+              select
+              label={t.paymentType}
+              value={newPayment.paymentType}
+              onChange={(e) => setNewPayment({ ...newPayment, paymentType: e.target.value })}
+              required
+              fullWidth
+            >
+              <MenuItem value="capital">{t.capitalPayment}</MenuItem>
+              <MenuItem value="interest">{t.interestPayment}</MenuItem>
+            </TextField>
             <Button type="submit" variant="contained" sx={{ minWidth: 120 }}>
               {t.addPayment}
             </Button>
           </Box>
         )}
 
-        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>{t.paymentHistory}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 2 }}>
+          <Typography variant="h6">{t.paymentHistory}</Typography>
+          <TextField
+            select
+            label={t.filterByType}
+            value={paymentTypeFilter}
+            onChange={(e) => setPaymentTypeFilter(e.target.value)}
+            size="small"
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="all">{t.all}</MenuItem>
+            <MenuItem value="capital">{t.capitalPayment}</MenuItem>
+            <MenuItem value="interest">{t.interestPayment}</MenuItem>
+          </TextField>
+        </Box>
         {payments.length > 0 ? (
           <TableContainer>
             <Table>
@@ -453,11 +543,15 @@ const LoanDetails = () => {
                 <TableRow>
                   <TableCell>{t.date}</TableCell>
                   <TableCell>{t.amount}</TableCell>
+                  <TableCell>{t.paymentType}</TableCell>
                   <TableCell>{t.actions}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).map((payment) => (
+                {payments
+                  .filter(payment => paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter)
+                  .sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))
+                  .map((payment) => (
                   <TableRow key={payment.paymentId} hover>
                     {editingPayment && editingPayment.paymentId === payment.paymentId ? (
                       <>
@@ -481,10 +575,23 @@ const LoanDetails = () => {
                           />
                         </TableCell>
                         <TableCell>
+                          <TextField
+                            select
+                            value={editingPayment.paymentType}
+                            onChange={(e) => setEditingPayment({ ...editingPayment, paymentType: e.target.value })}
+                            size="small"
+                            fullWidth
+                          >
+                            <MenuItem value="capital">{t.capitalPayment}</MenuItem>
+                            <MenuItem value="interest">{t.interestPayment}</MenuItem>
+                          </TextField>
+                        </TableCell>
+                        <TableCell>
                           <IconButton
                             color="primary"
                             onClick={() => handleUpdatePayment(payment.paymentId, {
                               amount: editingPayment.amount,
+                              paymentType: editingPayment.paymentType,
                               paymentDate: editingPayment.paymentDate
                             })}
                             size="small"
@@ -504,6 +611,7 @@ const LoanDetails = () => {
                       <>
                         <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
                         <TableCell>${parseFloat(payment.amount).toFixed(2)}</TableCell>
+                        <TableCell>{payment.paymentType === 'interest' ? t.interestPayment : t.capitalPayment}</TableCell>
                         <TableCell>
                           <IconButton
                             color="warning"
@@ -530,6 +638,46 @@ const LoanDetails = () => {
         ) : (
           <Typography color="text.secondary" sx={{ fontStyle: 'italic', py: 2 }}>
             {t.noPayments}
+          </Typography>
+        )}
+      </Paper>
+
+      <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+        <Typography variant="h6" gutterBottom>{t.interestBreakdown || 'Interest Breakdown'}</Typography>
+        {interestBreakdown.length > 0 ? (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t.cycle || 'Cycle'}</TableCell>
+                  <TableCell>{t.cycleDates || 'Cycle Dates'}</TableCell>
+                  <TableCell>{t.amount}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {interestBreakdown.map((item) => (
+                  <TableRow key={item.cycle} hover>
+                    <TableCell>{item.cycle}</TableCell>
+                    <TableCell>
+                      {formatDateDDMMYYYY(item.startDate)} - {formatDateDDMMYYYY(item.endDate)}
+                    </TableCell>
+                    <TableCell>${item.amount.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                  <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>
+                    {t.total || 'Total'}
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                    ${totalAccruedInterest.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography color="text.secondary" sx={{ fontStyle: 'italic', py: 2 }}>
+            {t.noInterestAccrued || 'No interest has accrued yet'}
           </Typography>
         )}
       </Paper>

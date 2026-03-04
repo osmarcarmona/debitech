@@ -14,7 +14,8 @@ function Reports() {
     const today = new Date();
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
+    console.log("startDate:", oneYearAgo.toISOString().split('T')[0])
+    console.log("endDate:", today.toISOString().split('T')[0])
     return {
       start: oneYearAgo.toISOString().split('T')[0],
       end: today.toISOString().split('T')[0]
@@ -50,8 +51,15 @@ function Reports() {
 
   const handleApplyFilters = () => {
     const filters = {};
-    if (startDate) filters.startDate = startDate;
-    if (endDate) filters.endDate = endDate;
+    // Validate and normalize dates before sending
+    if (startDate) {
+      const normalizedStart = startDate.replace(/^(\d{5,})/, (match) => match.slice(0, 4));
+      filters.startDate = normalizedStart;
+    }
+    if (endDate) {
+      const normalizedEnd = endDate.replace(/^(\d{5,})/, (match) => match.slice(0, 4));
+      filters.endDate = normalizedEnd;
+    }
     fetchReports(filters);
   };
 
@@ -104,6 +112,10 @@ function Reports() {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            inputProps={{
+              max: new Date().toISOString().split('T')[0],
+              min: '2000-01-01'
+            }}
           />
           <TextField
             type="date"
@@ -111,6 +123,10 @@ function Reports() {
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            inputProps={{
+              max: new Date().toISOString().split('T')[0],
+              min: '2000-01-01'
+            }}
           />
           <Button variant="contained" onClick={handleApplyFilters}>
             {t.applyFilters}

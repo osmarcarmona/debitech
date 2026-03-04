@@ -18,11 +18,23 @@ def get_reports(event, context):
         start_date = None
         end_date = None
         if start_date_str:
-            start_date = datetime.fromisoformat(start_date_str)
+            try:
+                # Validate year format (should be 4 digits)
+                if len(start_date_str.split('-')[0]) != 4:
+                    return error_response(f"Invalid start date format: {start_date_str}. Year must be 4 digits (YYYY-MM-DD)", 400)
+                start_date = datetime.fromisoformat(start_date_str)
+            except ValueError as e:
+                return error_response(f"Invalid start date format: {start_date_str}. Expected format: YYYY-MM-DD", 400)
         if end_date_str:
-            end_date = datetime.fromisoformat(end_date_str)
-            # Set to end of day
-            end_date = end_date.replace(hour=23, minute=59, second=59)
+            try:
+                # Validate year format (should be 4 digits)
+                if len(end_date_str.split('-')[0]) != 4:
+                    return error_response(f"Invalid end date format: {end_date_str}. Year must be 4 digits (YYYY-MM-DD)", 400)
+                end_date = datetime.fromisoformat(end_date_str)
+                # Set to end of day
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+            except ValueError as e:
+                return error_response(f"Invalid end date format: {end_date_str}. Expected format: YYYY-MM-DD", 400)
         
         # Get all loans and payments
         loans = db_service.get_all_loans()
@@ -34,10 +46,21 @@ def get_reports(event, context):
             for loan in loans:
                 approved_at = loan.get('approvedAt')
                 if approved_at:
-                    loan_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
-                    if start_date and loan_date < start_date:
-                        continue
-                    if end_date and loan_date > end_date:
+                    try:
+                        # Normalize date format (fix 5-digit years)
+                        date_parts = approved_at.split('-')
+                        if len(date_parts) >= 3 and len(date_parts[0]) > 4:
+                            date_parts[0] = date_parts[0][:4]
+                            approved_at = '-'.join(date_parts)
+                        
+                        loan_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                        if start_date and loan_date < start_date:
+                            continue
+                        if end_date and loan_date > end_date:
+                            continue
+                    except (ValueError, AttributeError) as e:
+                        # Skip loans with invalid dates
+                        print(f"Skipping loan {loan.get('loanId')} with invalid date: {approved_at}")
                         continue
                 filtered_loans.append(loan)
             loans = filtered_loans
@@ -74,24 +97,34 @@ def get_reports(event, context):
             # Calculate accrued interest for this loan
             accrued_interest = Decimal('0')
             if approved_at and loan.get('status') in ['active', 'approved']:
-                approved_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
-                current_date = datetime.utcnow()
-                
-                days_elapsed = (current_date - approved_date).days
-                
-                if days_elapsed >= 0:
-                    monthly_rate = interest_rate / Decimal('100')
-                    monthly_interest_amount = loan_amount * monthly_rate
+                try:
+                    # Normalize date format (fix 5-digit years)
+                    date_parts = approved_at.split('-')
+                    if len(date_parts) >= 3 and len(date_parts[0]) > 4:
+                        date_parts[0] = date_parts[0][:4]
+                        approved_at = '-'.join(date_parts)
                     
-                    # Calculate billing cycles (30 days per cycle)
-                    months_elapsed = Decimal(str(days_elapsed)) / Decimal('30')
-                    completed_cycles = int(months_elapsed)
-                    days_into_current_cycle = days_elapsed - (completed_cycles * 30)
+                    approved_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                    current_date = datetime.utcnow()
                     
-                    # If at least 1 day into a new cycle, count it as a full cycle
-                    billing_cycles = completed_cycles + 1 if days_into_current_cycle >= 1 else completed_cycles
+                    days_elapsed = (current_date - approved_date).days
                     
-                    accrued_interest = monthly_interest_amount * Decimal(str(billing_cycles))
+                    if days_elapsed >= 0:
+                        monthly_rate = interest_rate / Decimal('100')
+                        monthly_interest_amount = loan_amount * monthly_rate
+                        
+                        # Calculate billing cycles (30 days per cycle)
+                        months_elapsed = Decimal(str(days_elapsed)) / Decimal('30')
+                        completed_cycles = int(months_elapsed)
+                        days_into_current_cycle = days_elapsed - (completed_cycles * 30)
+                        
+                        # If at least 1 day into a new cycle, count it as a full cycle
+                        billing_cycles = completed_cycles + 1 if days_into_current_cycle >= 1 else completed_cycles
+                        
+                        accrued_interest = monthly_interest_amount * Decimal(str(billing_cycles))
+                except (ValueError, AttributeError) as e:
+                    # Skip interest calculation for loans with invalid dates
+                    print(f"Skipping interest calculation for loan {loan.get('loanId')} with invalid date: {approved_at}")
             
             # Add accrued interest to total interest profit (for active/approved loans)
             if loan.get('status') in ['active', 'approved'] and accrued_interest > 0:

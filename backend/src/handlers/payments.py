@@ -22,6 +22,7 @@ def add_payment(event, context):
             'paymentId': payment_id,
             'loanId': loan_id,
             'amount': Decimal(str(body['amount'])),
+            'paymentType': body.get('paymentType', 'capital'),  # 'capital' or 'interest'
             'paymentDate': body.get('paymentDate', datetime.utcnow().isoformat()),
             'createdAt': datetime.utcnow().isoformat()
         }
@@ -64,6 +65,8 @@ def update_payment(event, context):
             updates['amount'] = Decimal(str(body['amount']))
         if 'paymentDate' in body:
             updates['paymentDate'] = body['paymentDate']
+        if 'paymentType' in body:
+            updates['paymentType'] = body['paymentType']
         
         if updates:
             updates['updatedAt'] = datetime.utcnow().isoformat()

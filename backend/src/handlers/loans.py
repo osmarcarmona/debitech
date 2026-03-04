@@ -18,6 +18,7 @@ def create_loan(event, context):
             'borrowerId': body['borrowerId'],
             'amount': amount,
             'balanceAmount': amount,  # Initially, balance equals the principal amount
+            'balanceInterestAmount': Decimal('0'),  # Initially, no interest has been paid
             'interestRate': Decimal(str(body['interestRate'])),
             'status': 'pending',
             'createdAt': datetime.utcnow().isoformat(),
@@ -36,6 +37,12 @@ def create_loan(event, context):
             loan['status'] = 'approved'
         
         created_loan = db_service.create_loan(loan)
+        
+        # Create initial interest cycle if loan is approved
+        if loan.get('approvedAt'):
+            from handlers.interest_cycles import create_initial_interest_cycle
+            create_initial_interest_cycle(loan_id)
+        
         return success_response(created_loan, 201)
         
     except KeyError as e:
@@ -96,9 +103,36 @@ def update_loan_status(event, context):
         
         db_service.update_loan(loan_id, updates)
         
+        # Create initial interest cycle if loan is being approved
+        if new_status == 'approved':
+            from handlers.interest_cycles import create_initial_interest_cycle
+            create_initial_interest_cycle(loan_id)
+        
         return success_response({'message': 'Loan status updated', 'loanId': loan_id})
         
     except KeyError as e:
         return error_response(f'Missing required field: {str(e)}', 400)
+    except Exception as e:
+        return error_response(str(e), 500)
+
+def delete_loan(event, context):
+    try:
+        loan_id = event['pathParameters']['id']
+        
+        # Verify loan exists
+        loan = db_service.get_loan(loan_id)
+        if not loan:
+            return error_response('Loan not found', 404)
+        
+        # Delete all payments associated with this loan
+        payments = db_service.get_payments_by_loan(loan_id)
+        for payment in payments:
+            db_service.delete_payment(payment['paymentId'])
+        
+        # Delete the loan
+        db_service.delete_loan(loan_id)
+        
+        return success_response({'message': 'Loan and associated payments deleted', 'loanId': loan_id})
+        
     except Exception as e:
         return error_response(str(e), 500)
