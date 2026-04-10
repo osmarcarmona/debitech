@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Paper, Typography, Button, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, Grid, Card, CardContent, Box, Alert, CircularProgress, IconButton } from '@mui/material';
-import { ArrowBack, Edit, Delete, Save, Cancel } from '@mui/icons-material';
+import { ArrowBack, Edit, Delete, Save, Cancel, PictureAsPdf } from '@mui/icons-material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const LoanDetails = () => {
   const { id } = useParams();
@@ -262,9 +264,11 @@ const LoanDetails = () => {
 
   const calculateMinimalBasePayment = () => {
     if (!loan) return 0;
-    const principal = parseFloat(loan.amount);
+    const balance = loan.balanceAmount 
+      ? parseFloat(loan.balanceAmount) 
+      : parseFloat(loan.amount);
     const monthlyRate = parseFloat(loan.interestRate) / 100;
-    return principal * monthlyRate;
+    return balance * monthlyRate;
   };
 
   const getNextPaymentDate = () => {
@@ -283,6 +287,132 @@ const LoanDetails = () => {
     nextPaymentDate.setMonth(nextPaymentDate.getMonth() + billingCycles);
     
     return nextPaymentDate;
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const borrowerName = borrower ? borrower.name : loan.borrowerId;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text(t.loanDetails, pageWidth / 2, y, { align: 'center' });
+    y += 10;
+    doc.setFontSize(10);
+    doc.text(`${t.generated || 'Generated'}: ${new Date().toLocaleDateString()}`, pageWidth / 2, y, { align: 'center' });
+    y += 12;
+
+    // Borrower info
+    doc.setFontSize(13);
+    doc.text(t.borrowerInformation, 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    doc.text(`${t.name}: ${borrowerName}`, 14, y);
+    y += 6;
+    if (borrower?.phone) {
+      doc.text(`${t.phone}: ${borrower.phone}`, 14, y);
+      y += 6;
+    }
+    y += 4;
+
+    // Loan info table
+    doc.setFontSize(13);
+    doc.text(t.loanInformation, 14, y);
+    y += 2;
+
+    const balance = loan.balanceAmount ? parseFloat(loan.balanceAmount) : parseFloat(loan.amount);
+    const capitalPaidVal = parseFloat(loan.amount) - balance;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+      body: [
+        [t.principalAmount, `$${parseFloat(loan.amount).toFixed(2)}`],
+        [t.balanceAmount, `$${balance.toFixed(2)}`],
+        [t.interestRate, `${loan.interestRate}% ${t.monthly}`],
+        [t.monthInterestCycles, `${billingCycles} ${billingCycles === 1 ? t.cycle : t.cycles}`],
+        [t.accruedInterest, `$${outstandingInterest.toFixed(2)}`],
+        [t.totalAmount, `$${totalAmount.toFixed(2)}`],
+        [t.minimalBasePayment, `$${minimalBasePayment.toFixed(2)} / ${t.month}`],
+        [t.status, t[loan.status] || loan.status],
+      ],
+      columns: [
+        { header: t.loanInformation, dataKey: 0 },
+        { header: '', dataKey: 1 },
+      ],
+    });
+    y = doc.lastAutoTable.finalY + 10;
+
+    // Payment summary
+    doc.setFontSize(13);
+    doc.text(t.paymentSummary, 14, y);
+    y += 2;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [39, 174, 96] },
+      body: [
+        [t.totalPaid, `$${totalPaid.toFixed(2)}`],
+        [t.capitalPaid, `$${capitalPaidVal.toFixed(2)}`],
+        [t.interestPaid, `$${interestPaid.toFixed(2)}`],
+        [t.amountDue, `$${dueAmount.toFixed(2)}`],
+        [t.numberOfPayments, `${payments.length}`],
+      ],
+      columns: [
+        { header: t.paymentSummary, dataKey: 0 },
+        { header: '', dataKey: 1 },
+      ],
+    });
+    y = doc.lastAutoTable.finalY + 10;
+
+    // Payment history
+    if (payments.length > 0) {
+      doc.setFontSize(13);
+      doc.text(t.paymentHistory, 14, y);
+      y += 2;
+
+      const sortedPayments = [...payments].sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+      autoTable(doc, {
+        startY: y,
+        theme: 'striped',
+        headStyles: { fillColor: [52, 73, 94] },
+        head: [[t.date, t.amount, t.paymentType]],
+        body: sortedPayments.map(p => [
+          new Date(p.paymentDate).toLocaleDateString(),
+          `$${parseFloat(p.amount).toFixed(2)}`,
+          p.paymentType === 'interest' ? t.interestPayment : t.capitalPayment,
+        ]),
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // Interest breakdown
+    if (interestBreakdown.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.text(t.interestBreakdown || 'Interest Breakdown', 14, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y,
+        theme: 'striped',
+        headStyles: { fillColor: [192, 57, 43] },
+        head: [[t.cycle || 'Cycle', t.cycleDates || 'Cycle Dates', t.amount]],
+        body: [
+          ...interestBreakdown.map(item => [
+            item.cycle,
+            `${formatDateDDMMYYYY(item.startDate)} - ${formatDateDDMMYYYY(item.endDate)}`,
+            `$${item.amount.toFixed(2)}`,
+          ]),
+          [{ content: t.total || 'Total', colSpan: 2, styles: { fontStyle: 'bold' } }, { content: `$${totalAccruedInterest.toFixed(2)}`, styles: { fontStyle: 'bold' } }],
+        ],
+      });
+    }
+
+    doc.save(`${t.loanDetails}_${borrowerName}_${loan.loanId.substring(0, 8)}.pdf`);
   };
 
   if (loading) return <CircularProgress sx={{ display: 'block', margin: '2rem auto' }} />;
@@ -309,14 +439,24 @@ const LoanDetails = () => {
         >
           {t.backToLoans}
         </Button>
-        <Button 
-          variant="outlined"
-          color="error"
-          startIcon={<Delete />}
-          onClick={handleDeleteLoan}
-        >
-          {t.deleteLoan}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            variant="outlined"
+            color="primary"
+            startIcon={<PictureAsPdf />}
+            onClick={generatePDF}
+          >
+            {t.downloadPdf}
+          </Button>
+          <Button 
+            variant="outlined"
+            color="error"
+            startIcon={<Delete />}
+            onClick={handleDeleteLoan}
+          >
+            {t.deleteLoan}
+          </Button>
+        </Box>
       </Box>
       
       <Typography variant="h4" gutterBottom>{t.loanDetails}</Typography>

@@ -14,6 +14,7 @@ export const translations = {
     borrower: 'Borrower',
     approvedDate: 'Approved Date',
     nextPaymentDue: 'Next Payment Due',
+    searchByBorrower: 'Search by Borrower',
     
     // Create Loan
     createNewLoan: 'Create New Loan',
@@ -119,7 +120,9 @@ export const translations = {
     startDate: 'Start Date',
     endDate: 'End Date',
     applyFilters: 'Apply Filters',
-    clearFilters: 'Clear Filters'
+    clearFilters: 'Clear Filters',
+    downloadPdf: 'Download PDF',
+    generated: 'Generated'
   },
   es: {
     locale: 'es-ES',
@@ -136,6 +139,7 @@ export const translations = {
     borrower: 'Prestatario',
     approvedDate: 'Fecha de Aprobación',
     nextPaymentDue: 'Próximo Pago Vence',
+    searchByBorrower: 'Buscar por Prestatario',
     
     // Create Loan
     createNewLoan: 'Crear Nuevo Préstamo',
@@ -241,6 +245,8 @@ export const translations = {
     startDate: 'Fecha Inicio',
     endDate: 'Fecha Fin',
     applyFilters: 'Aplicar Filtros',
-    clearFilters: 'Limpiar Filtros'
+    clearFilters: 'Limpiar Filtros',
+    downloadPdf: 'Descargar PDF',
+    generated: 'Generado'
   }
 };

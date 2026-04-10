@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel, OutlinedInput, Chip, Link, CircularProgress, TableSortLabel, Box, IconButton } from '@mui/material';
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel, OutlinedInput, Chip, Link, CircularProgress, TableSortLabel, Box, IconButton, TextField } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { loanService, borrowerService } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,8 +12,9 @@ const LoanList = () => {
   const [borrowers, setBorrowers] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState(['approved', 'active']);
-  const [sortField, setSortField] = useState('approvedAt');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [sortField, setSortField] = useState('borrower');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [borrowerFilter, setBorrowerFilter] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -102,7 +103,14 @@ const LoanList = () => {
   };
 
   const getSortedLoans = () => {
-    const sorted = [...loans].sort((a, b) => {
+    const filtered = borrowerFilter
+      ? loans.filter(loan => {
+          const name = borrowers[loan.borrowerId] || '';
+          return name.toLowerCase().includes(borrowerFilter.toLowerCase());
+        })
+      : loans;
+
+    const sorted = [...filtered].sort((a, b) => {
       let aValue, bValue;
 
       switch (sortField) {
@@ -147,8 +155,16 @@ const LoanList = () => {
   return (
     <Paper elevation={3} sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>{t.loans}</Typography>
-      <FormControl sx={{ mb: 3, minWidth: 200 }}>
-        <InputLabel>{t.filterByStatus}</InputLabel>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          label={t.searchByBorrower}
+          value={borrowerFilter}
+          onChange={(e) => setBorrowerFilter(e.target.value)}
+          size="small"
+          sx={{ minWidth: 200 }}
+        />
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>{t.filterByStatus}</InputLabel>
         <Select
           multiple
           value={statusFilter}
@@ -168,12 +184,12 @@ const LoanList = () => {
           <MenuItem value="paid">{t.paid}</MenuItem>
           <MenuItem value="defaulted">{t.defaulted}</MenuItem>
         </Select>
-      </FormControl>
+        </FormControl>
+      </Box>
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
               <TableCell>
                 <TableSortLabel
                   active={sortField === 'borrower'}
@@ -234,18 +250,17 @@ const LoanList = () => {
           <TableBody>
             {getSortedLoans().map((loan) => (
               <TableRow key={loan.loanId} hover>
-                <TableCell>
-                  <Link
-                    href={`/loans/${loan.loanId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="body2"
-                    title={loan.loanId}
-                  >
-                    {loan.loanId.substring(0, 4)}
-                  </Link>
-                </TableCell>
-                <TableCell>{borrowers[loan.borrowerId] || loan.borrowerId}</TableCell>
+              <TableCell>
+                <Link
+                  href={`/loans/${loan.loanId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="body2"
+                  title={loan.loanId}
+                >
+                  {borrowers[loan.borrowerId] || loan.borrowerId}
+                </Link>
+              </TableCell>
                 <TableCell>${parseFloat(loan.amount).toFixed(2)}</TableCell>
                 <TableCell>{loan.interestRate}%</TableCell>
                 <TableCell sx={{ 
